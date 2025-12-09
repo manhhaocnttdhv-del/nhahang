@@ -16,28 +16,224 @@
         </div>
     </div>
 
+    <!-- Summary Cards -->
     <div class="row mb-4">
-        <div class="col-md-6 mb-3">
-            <div class="card bg-primary text-white">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white h-100">
                 <div class="card-body">
-                    <h5>Doanh Thu</h5>
-                    <h2>{{ number_format($revenue) }} đ</h2>
+                    <h5><i class="bi bi-cash-coin me-2"></i> Doanh Thu</h5>
+                    <h2 class="mb-0">{{ number_format($revenue) }} đ</h2>
                 </div>
             </div>
         </div>
-        <div class="col-md-6 mb-3">
-            <div class="card bg-success text-white">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white h-100">
                 <div class="card-body">
-                    <h5>Số Đơn Hàng</h5>
-                    <h2>{{ $orderCount }}</h2>
+                    <h5><i class="bi bi-receipt me-2"></i> Số Đơn Hàng</h5>
+                    <h2 class="mb-0">{{ $orderCount }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <h5><i class="bi bi-people me-2"></i> Khách Hàng</h5>
+                    <h2 class="mb-0">{{ $customerStats->count() }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <h5><i class="bi bi-table me-2"></i> Bàn Đã Sử Dụng</h5>
+                    <h2 class="mb-0">{{ $tableStats->where('order_count', '>', 0)->count() }}</h2>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Daily Revenue Chart -->
+    @if(!empty($dailyRevenue) && count($dailyRevenue) > 0)
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i> Biểu Đồ Doanh Thu Theo Ngày</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="revenueChart" height="80"></canvas>
+        </div>
+    </div>
+    @endif
+
+    <div class="row">
+        <!-- Revenue by Payment Method -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i> Doanh Thu Theo Phương Thức Thanh Toán</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Phương thức</th>
+                                    <th class="text-end">Doanh thu</th>
+                                    <th class="text-end">Tỷ lệ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($revenueByPaymentMethod as $method)
+                                    @php
+                                        $methodName = [
+                                            'cash' => 'Tiền mặt',
+                                            'bank_transfer' => 'Chuyển khoản',
+                                            'momo' => 'MoMo',
+                                            'vnpay' => 'VNPay',
+                                            'bank_card' => 'Thẻ ngân hàng'
+                                        ][$method->payment_method] ?? $method->payment_method;
+                                        $percentage = $revenue > 0 ? ($method->total / $revenue * 100) : 0;
+                                    @endphp
+                                    <tr>
+                                        <td>{{ $methodName }}</td>
+                                        <td class="text-end">{{ number_format($method->total) }} đ</td>
+                                        <td class="text-end">
+                                            <span class="badge bg-primary">{{ number_format($percentage, 1) }}%</span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted">Chưa có dữ liệu</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue by Order Type -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-bag me-2"></i> Doanh Thu Theo Loại Đơn</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Loại đơn</th>
+                                    <th class="text-end">Doanh thu</th>
+                                    <th class="text-end">Tỷ lệ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($revenueByOrderType as $type)
+                                    @php
+                                        $typeName = [
+                                            'dine_in' => 'Tại chỗ',
+                                            'takeaway' => 'Mang đi',
+                                            'delivery' => 'Giao hàng'
+                                        ][$type->order_type] ?? $type->order_type;
+                                        $percentage = $revenue > 0 ? ($type->total / $revenue * 100) : 0;
+                                    @endphp
+                                    <tr>
+                                        <td>{{ $typeName }}</td>
+                                        <td class="text-end">{{ number_format($type->total) }} đ</td>
+                                        <td class="text-end">
+                                            <span class="badge bg-success">{{ number_format($percentage, 1) }}%</span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted">Chưa có dữ liệu</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Top Customers -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-star me-2"></i> Top 10 Khách Hàng</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Khách hàng</th>
+                                    <th class="text-center">Số đơn</th>
+                                    <th class="text-end">Tổng chi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($customerStats as $customer)
+                                    <tr>
+                                        <td>{{ $customer->user->name ?? 'N/A' }}</td>
+                                        <td class="text-center">{{ $customer->order_count }}</td>
+                                        <td class="text-end">{{ number_format($customer->total_spent) }} đ</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted">Chưa có dữ liệu</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Statistics -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-table me-2"></i> Thống Kê Bàn</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Bàn</th>
+                                    <th class="text-center">Số đơn</th>
+                                    <th class="text-end">Doanh thu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($tableStats->where('order_count', '>', 0)->take(10) as $table)
+                                    <tr>
+                                        <td>{{ $table->name }}</td>
+                                        <td class="text-center">{{ $table->order_count }}</td>
+                                        <td class="text-end">{{ number_format($table->revenue ?? 0) }} đ</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted">Chưa có dữ liệu</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popular Items -->
     <div class="card">
         <div class="card-header">
-            <h5 class="mb-0">Món Bán Chạy</h5>
+            <h5 class="mb-0"><i class="bi bi-fire me-2"></i> Top 10 Món Bán Chạy</h5>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -45,7 +241,7 @@
                     <thead>
                         <tr>
                             <th>Món</th>
-                            <th>Số lượng</th>
+                            <th class="text-center">Số lượng</th>
                             <th class="text-end">Doanh thu</th>
                         </tr>
                     </thead>
@@ -53,7 +249,7 @@
                         @forelse($popularItems as $item)
                             <tr>
                                 <td><strong>{{ $item->item_name }}</strong></td>
-                                <td>{{ $item->total_quantity }}</td>
+                                <td class="text-center">{{ $item->total_quantity }}</td>
                                 <td class="text-end">{{ number_format($item->total_revenue) }} đ</td>
                             </tr>
                         @empty
@@ -67,5 +263,58 @@
         </div>
     </div>
 </div>
-@endsection
 
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    @if(!empty($dailyRevenue) && count($dailyRevenue) > 0)
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    const revenueData = @json($dailyRevenue);
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: revenueData.map(item => {
+                const date = new Date(item.date);
+                return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+            }),
+            datasets: [{
+                label: 'Doanh Thu (đ)',
+                data: revenueData.map(item => item.revenue),
+                borderColor: 'rgb(102, 126, 234)',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Doanh thu: ' + new Intl.NumberFormat('vi-VN').format(context.parsed.y) + ' đ';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return new Intl.NumberFormat('vi-VN').format(value) + ' đ';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    @endif
+</script>
+@endpush
+@endsection

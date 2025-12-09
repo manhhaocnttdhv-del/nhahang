@@ -54,6 +54,12 @@
                         </div>
                     </form>
 
+                    <div class="text-center mb-3">
+                        <a href="{{ route('password.request') }}" class="text-decoration-none" style="color: var(--primary-color);">
+                            <i class="bi bi-question-circle me-1"></i> Quên mật khẩu?
+                        </a>
+                    </div>
+
                     <hr class="my-4">
                     <div class="text-center">
                         <p class="mb-0">Chưa có tài khoản? 

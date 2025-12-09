@@ -159,8 +159,14 @@ class OrderController extends Controller
             DB::commit();
 
             if ($request->booking_id) {
+                // Refresh booking to load new order
+                $booking = \App\Models\Booking::find($request->booking_id);
+                if ($booking) {
+                    $booking->load('orders.orderItems');
+                }
+                
                 return redirect()->route('bookings.show', $request->booking_id)
-                    ->with('success', 'Đặt món thành công!');
+                    ->with('success', 'Đặt món thành công! Đơn hàng #' . $order->order_number . ' đã được tạo.');
             }
 
             return redirect()->route('orders.index')

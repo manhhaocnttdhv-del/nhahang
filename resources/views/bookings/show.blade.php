@@ -118,58 +118,93 @@
             </div>
 
             <!-- Orders from this booking -->
-            @if($booking->orders->count() > 0)
             <div class="card mt-4 fade-in-up" style="animation-delay: 0.2s;">
                 <div class="card-header" style="background: linear-gradient(135deg, #06d6a0 0%, #048a64 100%); color: white;">
-                    <h5 class="mb-0"><i class="bi bi-receipt"></i> Đơn Hàng Từ Đặt Bàn Này</h5>
+                    <h5 class="mb-0">
+                        <i class="bi bi-receipt me-2"></i> Đơn Hàng Từ Đặt Bàn Này
+                        <span class="badge bg-light text-dark ms-2">{{ $booking->orders->count() }}</span>
+                    </h5>
                 </div>
                 <div class="card-body">
-                    @foreach($booking->orders as $order)
-                        <div class="card mb-3 border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <div>
-                                        <strong>Đơn #{{ $order->order_number }}</strong>
-                                        <small class="text-muted ms-2">{{ $order->created_at->format('d/m/Y H:i') }}</small>
+                    @if($booking->orders->count() > 0)
+                        @foreach($booking->orders as $order)
+                            <div class="card mb-3 border-0 shadow-sm">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <strong>Đơn #{{ $order->order_number }}</strong>
+                                            <small class="text-muted ms-2">{{ $order->created_at->format('d/m/Y H:i') }}</small>
+                                        </div>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <a href="{{ route('orders.show', $order->id) }}" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-eye"></i> Chi tiết
+                                            </a>
+                                            <span class="badge 
+                                                {{ $order->status === 'pending' ? 'bg-warning' : '' }}
+                                                {{ $order->status === 'processing' ? 'bg-info' : '' }}
+                                                {{ $order->status === 'preparing' ? 'bg-primary' : '' }}
+                                                {{ $order->status === 'ready' ? 'bg-success' : '' }}
+                                                {{ $order->status === 'served' ? 'bg-success' : '' }}
+                                                {{ $order->status === 'delivered' ? 'bg-success' : '' }}
+                                                {{ $order->status === 'cancelled' ? 'bg-danger' : '' }}">
+                                                @if($order->status === 'pending')
+                                                    <i class="bi bi-clock"></i> Chờ xử lý
+                                                @elseif($order->status === 'processing')
+                                                    <i class="bi bi-gear"></i> Đang xử lý
+                                                @elseif($order->status === 'preparing')
+                                                    <i class="bi bi-fire"></i> Đang chế biến
+                                                @elseif($order->status === 'ready')
+                                                    <i class="bi bi-check-circle"></i> Sẵn sàng
+                                                @elseif($order->status === 'served')
+                                                    <i class="bi bi-check2-all"></i> Đã phục vụ
+                                                @elseif($order->status === 'delivered')
+                                                    <i class="bi bi-truck"></i> Đã giao
+                                                @else
+                                                    <i class="bi bi-x-octagon"></i> Đã hủy
+                                                @endif
+                                            </span>
+                                        </div>
                                     </div>
-                                    <span class="badge 
-                                        {{ $order->status === 'pending' ? 'bg-warning' : '' }}
-                                        {{ $order->status === 'served' ? 'bg-success' : '' }}">
-                                        {{ $order->status === 'pending' ? 'Chờ xử lý' : 'Đã phục vụ' }}
-                                    </span>
-                                </div>
-                                <div class="table-responsive">
-                                    <table class="table table-sm mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th>Món</th>
-                                                <th class="text-center">SL</th>
-                                                <th class="text-end">Thành tiền</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($order->orderItems as $item)
+                                    <div class="table-responsive">
+                                        <table class="table table-sm mb-0">
+                                            <thead>
                                                 <tr>
-                                                    <td>{{ $item->item_name }}</td>
-                                                    <td class="text-center">{{ $item->quantity }}</td>
-                                                    <td class="text-end">{{ number_format($item->subtotal) }} đ</td>
+                                                    <th>Món</th>
+                                                    <th class="text-center">SL</th>
+                                                    <th class="text-end">Thành tiền</th>
                                                 </tr>
-                                            @endforeach
-                                        </tbody>
-                                        <tfoot>
-                                            <tr>
-                                                <th colspan="2">Tổng:</th>
-                                                <th class="text-end price-tag">{{ number_format($order->total_amount) }} đ</th>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($order->orderItems as $item)
+                                                    <tr>
+                                                        <td>{{ $item->item_name }}</td>
+                                                        <td class="text-center">{{ $item->quantity }}</td>
+                                                        <td class="text-end">{{ number_format($item->subtotal) }} đ</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <th colspan="2">Tổng:</th>
+                                                    <th class="text-end price-tag">{{ number_format($order->total_amount) }} đ</th>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
+                        @endforeach
+                    @else
+                        <div class="text-center py-5">
+                            <i class="bi bi-cart-x display-1 text-muted mb-3"></i>
+                            <p class="text-muted mb-4">Chưa có đơn hàng nào từ đặt bàn này</p>
+                            <a href="{{ route('bookings.order', $booking->id) }}" class="btn btn-success">
+                                <i class="bi bi-cart-plus me-2"></i> Đặt Món Ngay
+                            </a>
                         </div>
-                    @endforeach
+                    @endif
                 </div>
             </div>
-            @endif
         </div>
 
         <!-- Right: Actions -->

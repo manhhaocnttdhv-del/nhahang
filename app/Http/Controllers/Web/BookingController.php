@@ -96,7 +96,9 @@ class BookingController extends Controller
     public function show($id)
     {
         $booking = Booking::where('user_id', auth()->id())
-            ->with(['table', 'orders.orderItems.menuItem'])
+            ->with(['table', 'orders' => function($query) {
+                $query->orderBy('created_at', 'desc');
+            }, 'orders.orderItems'])
             ->findOrFail($id);
 
         return view('bookings.show', compact('booking'));

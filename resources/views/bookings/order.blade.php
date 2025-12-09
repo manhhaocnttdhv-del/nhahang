@@ -218,20 +218,72 @@
             });
         }
 
-        // Submit order
-        $('#orderForm').submit(function(e) {
+        // Submit order button click handler
+        $('#submitOrder').on('click', function(e) {
+            e.preventDefault();
+            
+            // Validate cart
             if (cart.length === 0) {
-                e.preventDefault();
                 alert('Vui lòng chọn ít nhất một món!');
                 return false;
             }
             
+            // Prepare items data
             const items = cart.map(item => ({
                 menu_item_id: item.id,
                 quantity: item.quantity
             }));
 
-            $('#orderItems').val(JSON.stringify(items));
+            // Validate items
+            if (items.length === 0) {
+                alert('Vui lòng chọn ít nhất một món!');
+                return false;
+            }
+
+            // Set items to hidden input
+            const itemsJson = JSON.stringify(items);
+            console.log('Items JSON:', itemsJson);
+            $('#orderItems').val(itemsJson);
+            
+            // Verify items were set
+            const itemsValue = $('#orderItems').val();
+            console.log('Items value after set:', itemsValue);
+            if (!itemsValue || itemsValue === '' || itemsValue === '[]') {
+                alert('Lỗi: Không thể lưu thông tin món ăn. Vui lòng thử lại!');
+                return false;
+            }
+            
+            // Disable submit button to prevent double submit
+            const submitBtn = $(this);
+            submitBtn.prop('disabled', true);
+            const originalText = submitBtn.html();
+            submitBtn.html('<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...');
+            
+            // Use setTimeout to ensure DOM is updated before submit
+            setTimeout(() => {
+                // Double check items are set
+                const finalItemsValue = $('#orderItems').val();
+                console.log('Final items value:', finalItemsValue);
+                
+                if (!finalItemsValue || finalItemsValue === '' || finalItemsValue === '[]') {
+                    alert('Lỗi: Dữ liệu món ăn không hợp lệ. Vui lòng thử lại!');
+                    submitBtn.prop('disabled', false);
+                    submitBtn.html(originalText);
+                    return false;
+                }
+                
+                // Create form data to verify
+                const form = document.getElementById('orderForm');
+                const formData = new FormData(form);
+                console.log('FormData items:', formData.get('items'));
+                console.log('FormData booking_id:', formData.get('booking_id'));
+                console.log('FormData table_id:', formData.get('table_id'));
+                
+                // Submit the form directly
+                form.submit();
+            }, 300);
+            
+            return false;
         });
     });
 </script>

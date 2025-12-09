@@ -26,13 +26,24 @@ class OrderController extends Controller
         $request->validate([
             'items' => 'required|string',
             'order_type' => 'required|in:dine_in,takeaway,delivery',
-            'table_id' => 'nullable|exists:tables,id|required_if:order_type,dine_in',
+            'table_id' => 'nullable|exists:tables,id',
+            'booking_id' => 'nullable|exists:bookings,id',
             'customer_name' => 'nullable|string|max:255|required_if:order_type,delivery,takeaway',
             'customer_phone' => 'nullable|string|max:20|required_if:order_type,delivery,takeaway',
             'customer_address' => 'nullable|string|max:500|required_if:order_type,delivery',
             'voucher_code' => 'nullable|string',
             'notes' => 'nullable|string|max:1000',
         ]);
+        
+        // If booking_id is provided, table_id is optional (can be set later)
+        if ($request->booking_id && !$request->table_id) {
+            $booking = \App\Models\Booking::find($request->booking_id);
+            if ($booking && $booking->table_id) {
+                $request->merge(['table_id' => $booking->table_id]);
+            }
+        } elseif ($request->order_type === 'dine_in' && !$request->booking_id && !$request->table_id) {
+            return back()->withErrors(['table_id' => 'Vui lòng chọn bàn hoặc đặt bàn trước'])->withInput();
+        }
 
         $items = json_decode($request->items, true);
         

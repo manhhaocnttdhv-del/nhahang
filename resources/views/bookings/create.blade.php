@@ -91,15 +91,15 @@
                 </div>
             </div>
 
-            <!-- Today's Bookings Info -->
-            @if($todayBookings->count() > 0)
+            <!-- Selected Date Bookings Info -->
+            @if(isset($selectedDateBookings) && $selectedDateBookings->count() > 0)
             <div class="card mt-4 fade-in-up" style="animation-delay: 0.3s;">
                 <div class="card-header" style="background: linear-gradient(135deg, #06d6a0 0%, #048a64 100%); color: white;">
-                    <h5 class="mb-0"><i class="bi bi-calendar3"></i> Đặt Bàn Hôm Nay</h5>
+                    <h5 class="mb-0"><i class="bi bi-calendar3"></i> Đặt Bàn Ngày {{ isset($selectedDate) ? \Carbon\Carbon::parse($selectedDate)->format('d/m/Y') : today()->format('d/m/Y') }}</h5>
                 </div>
                 <div class="card-body">
                     <div class="row g-2">
-                        @foreach($todayBookings->take(6) as $booking)
+                        @foreach($selectedDateBookings->take(6) as $booking)
                             <div class="col-md-6">
                                 <div class="d-flex align-items-center p-2 rounded" style="background: #f8f9fa;">
                                     <div class="flex-grow-1">
@@ -130,7 +130,7 @@
             @endif
         </div>
 
-        <!-- Right: Booking Form -->
+        <!-- Right: Booking Form (without date/time) -->
         <div class="col-lg-4">
             <div class="card sticky-top fade-in-up" style="top: 100px; animation-delay: 0.2s;">
                 <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem;">
@@ -139,122 +139,250 @@
                     </h4>
                 </div>
                 <div class="card-body p-4">
-                    <form action="{{ route('bookings.store') }}" method="POST" id="bookingForm">
-                        @csrf
-                        
-                        <div class="mb-3">
-                            <label for="customer_name" class="form-label fw-bold">
-                                <i class="bi bi-person me-2"></i>Họ và tên <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control form-control-lg @error('customer_name') is-invalid @enderror" 
-                                   id="customer_name" name="customer_name" 
-                                   value="{{ old('customer_name', auth()->user()->name ?? '') }}" required>
-                            @error('customer_name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+                    <div class="mb-3">
+                        <label for="customer_name" class="form-label fw-bold">
+                            <i class="bi bi-person me-2"></i>Họ và tên <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control form-control-lg @error('customer_name') is-invalid @enderror" 
+                               id="customer_name" name="customer_name" 
+                               value="{{ old('customer_name', auth()->user()->name ?? '') }}" required>
+                        @error('customer_name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
 
-                        <div class="mb-3">
-                            <label for="customer_phone" class="form-label fw-bold">
-                                <i class="bi bi-telephone me-2"></i>Số điện thoại <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control form-control-lg @error('customer_phone') is-invalid @enderror" 
-                                   id="customer_phone" name="customer_phone" 
-                                   value="{{ old('customer_phone', auth()->user()->phone ?? '') }}" required>
-                            @error('customer_phone')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+                    <div class="mb-3">
+                        <label for="customer_phone" class="form-label fw-bold">
+                            <i class="bi bi-telephone me-2"></i>Số điện thoại <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control form-control-lg @error('customer_phone') is-invalid @enderror" 
+                               id="customer_phone" name="customer_phone" 
+                               value="{{ old('customer_phone', auth()->user()->phone ?? '') }}" required>
+                        @error('customer_phone')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
 
-                        <div class="mb-3">
-                            <label for="booking_date" class="form-label fw-bold">
-                                <i class="bi bi-calendar me-2"></i>Ngày <span class="text-danger">*</span>
-                            </label>
-                            <input type="date" class="form-control @error('booking_date') is-invalid @enderror" 
-                                   id="booking_date" name="booking_date" 
-                                   value="{{ old('booking_date', date('Y-m-d')) }}" 
-                                   min="{{ date('Y-m-d') }}" required>
-                            @error('booking_date')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                    <div class="mb-3">
+                        <label for="number_of_guests" class="form-label fw-bold">
+                            <i class="bi bi-people me-2"></i>Số lượng khách <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" class="form-control form-control-lg @error('number_of_guests') is-invalid @enderror" 
+                               id="number_of_guests" name="number_of_guests" 
+                               value="{{ old('number_of_guests') }}" min="1" max="50" required>
+                        @error('number_of_guests')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="text-muted" id="capacityHint"></small>
+                    </div>
+                    
+                    <div class="mb-3" id="selectedTableInfo" style="display: none;">
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Bàn đã chọn:</strong> <span id="selectedTableName"></span> 
+                            (Sức chứa: <span id="selectedTableCapacity"></span> người)
+                            <br>
+                            <small><i class="bi bi-geo-alt me-1"></i>Vị trí: <span id="selectedTableLocation"></span></small>
                         </div>
+                    </div>
 
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <label for="booking_time" class="form-label fw-bold">
-                                    <i class="bi bi-clock me-2"></i>Giờ bắt đầu <span class="text-danger">*</span>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label fw-bold">
+                            <i class="bi bi-sticky me-2"></i>Ghi chú
+                        </label>
+                        <textarea class="form-control @error('notes') is-invalid @enderror" 
+                                  id="notes" name="notes" rows="3" 
+                                  placeholder="Dị ứng, trẻ em đi kèm, yêu cầu đặc biệt...">{{ old('notes') }}</textarea>
+                        @error('notes')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- Hiển thị thông tin xung đột khi chọn ngày/giờ -->
+                    <div id="conflictInfo" class="mb-3" style="display: none;">
+                        <div class="alert alert-warning mb-0">
+                            <h6 class="mb-2"><i class="bi bi-exclamation-triangle me-2"></i>Thông tin đặt bàn:</h6>
+                            <div id="conflictInfoContent" class="small">
+                                <!-- Sẽ được điền bởi JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Hướng dẫn:</strong> Click vào bàn để chọn ngày và giờ đặt bàn.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking Modal -->
+        <div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <h5 class="modal-title" id="bookingModalLabel">
+                            <i class="bi bi-calendar-check me-2"></i> Đặt Bàn: <span id="modalTableName"></span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form action="{{ route('bookings.store') }}" method="POST" id="bookingForm">
+                            @csrf
+                            
+                            <input type="hidden" id="selected_table_id" name="selected_table_id">
+                            <input type="hidden" id="location_preference" name="location_preference" value="{{ old('location_preference') }}">
+                            
+                            <div class="mb-3">
+                                <label for="modal_customer_name" class="form-label fw-bold">
+                                    <i class="bi bi-person me-2"></i>Họ và tên <span class="text-danger">*</span>
                                 </label>
-                                <input type="time" class="form-control @error('booking_time') is-invalid @enderror" 
-                                       id="booking_time" name="booking_time" 
-                                       value="{{ old('booking_time', '18:00') }}" required>
-                                @error('booking_time')
+                                <input type="text" class="form-control form-control-lg @error('customer_name') is-invalid @enderror" 
+                                       id="modal_customer_name" name="customer_name" 
+                                       value="{{ old('customer_name', auth()->user()->name ?? '') }}" required>
+                                @error('customer_name')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="col-6">
-                                <label for="end_time" class="form-label fw-bold">
-                                    <i class="bi bi-clock-history me-2"></i>Giờ kết thúc <span class="text-danger">*</span>
+
+                            <div class="mb-3">
+                                <label for="modal_customer_phone" class="form-label fw-bold">
+                                    <i class="bi bi-telephone me-2"></i>Số điện thoại <span class="text-danger">*</span>
                                 </label>
-                                <input type="time" class="form-control @error('end_time') is-invalid @enderror" 
-                                       id="end_time" name="end_time" 
-                                       value="{{ old('end_time', '20:00') }}" required>
-                                @error('end_time')
+                                <input type="text" class="form-control form-control-lg @error('customer_phone') is-invalid @enderror" 
+                                       id="modal_customer_phone" name="customer_phone" 
+                                       value="{{ old('customer_phone', auth()->user()->phone ?? '') }}" required>
+                                @error('customer_phone')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                        </div>
-                        <small class="text-muted mb-3 d-block">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Thời gian đặt bàn tối thiểu 30 phút, tối đa 4 giờ. Hệ thống sẽ tự động kiểm tra xung đột thời gian.
-                        </small>
 
-                        <div class="mb-3">
-                            <label for="number_of_guests" class="form-label fw-bold">
-                                <i class="bi bi-people me-2"></i>Số lượng khách <span class="text-danger">*</span>
-                            </label>
-                            <input type="number" class="form-control form-control-lg @error('number_of_guests') is-invalid @enderror" 
-                                   id="number_of_guests" name="number_of_guests" 
-                                   value="{{ old('number_of_guests') }}" min="1" max="50" required>
-                            @error('number_of_guests')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="text-muted" id="capacityHint"></small>
-                        </div>
-                        
-                        <div class="mb-3" id="selectedTableInfo" style="display: none;">
-                            <div class="alert alert-info mb-0">
-                                <i class="bi bi-info-circle me-2"></i>
-                                <strong>Bàn đã chọn:</strong> <span id="selectedTableName"></span> 
-                                (Sức chứa: <span id="selectedTableCapacity"></span> người)
-                                <br>
-                                <small><i class="bi bi-geo-alt me-1"></i>Vị trí: <span id="selectedTableLocation"></span></small>
+                            <div class="mb-3">
+                                <label for="modal_booking_date" class="form-label fw-bold">
+                                    <i class="bi bi-calendar me-2"></i>Ngày <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" class="form-control @error('booking_date') is-invalid @enderror" 
+                                       id="modal_booking_date" name="booking_date" 
+                                       value="{{ old('booking_date', date('Y-m-d')) }}" 
+                                       min="{{ date('Y-m-d') }}" required>
+                                @error('booking_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
-                        </div>
 
-                        <!-- Location preference - Hidden, auto-filled when table is selected -->
-                        <input type="hidden" id="location_preference" name="location_preference" value="{{ old('location_preference') }}">
+                            <!-- Timeline hiển thị các khung giờ đã đặt -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold mb-2">
+                                    <i class="bi bi-calendar-range me-2"></i>Timeline Đặt Bàn (<span id="timelineDate">{{ date('d/m/Y') }}</span>)
+                                </label>
+                                <div class="time-timeline-container" style="background: #f8f9fa; border-radius: 8px; padding: 15px; position: relative; overflow-x: auto;">
+                                    <div class="time-timeline" id="timeTimeline" style="position: relative; height: 60px; min-width: 840px;">
+                                        <!-- Timeline sẽ được render bởi JavaScript -->
+                                    </div>
+                                </div>
+                                <small class="text-muted d-block mt-2">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    <span class="badge bg-success me-2" style="width: 12px; height: 12px; display: inline-block; padding: 0;"></span> Trống
+                                    <span class="badge bg-warning me-2" style="width: 12px; height: 12px; display: inline-block; padding: 0;"></span> Đã đặt
+                                    <span class="badge bg-danger me-2" style="width: 12px; height: 12px; display: inline-block; padding: 0;"></span> Đang chọn
+                                </small>
+                            </div>
 
-                        <div class="mb-3">
-                            <label for="notes" class="form-label fw-bold">
-                                <i class="bi bi-sticky me-2"></i>Ghi chú
-                            </label>
-                            <textarea class="form-control @error('notes') is-invalid @enderror" 
-                                      id="notes" name="notes" rows="3" 
-                                      placeholder="Dị ứng, trẻ em đi kèm, yêu cầu đặc biệt...">{{ old('notes') }}</textarea>
-                            @error('notes')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label for="modal_booking_time" class="form-label fw-bold">
+                                        <i class="bi bi-clock me-2"></i>Giờ bắt đầu <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="time" class="form-control @error('booking_time') is-invalid @enderror" 
+                                           id="modal_booking_time" name="booking_time" 
+                                           value="{{ old('booking_time', '18:00') }}" 
+                                           min="08:00" max="22:00" step="1800" required>
+                                    @error('booking_time')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <!-- Quick select buttons -->
+                                    <div class="mt-2 d-flex flex-wrap gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="08:00">8:00</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="10:00">10:00</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="12:00">12:00</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="14:00">14:00</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="16:00">16:00</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="18:00">18:00</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="20:00">20:00</button>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="modal_duration" class="form-label fw-bold">
+                                        <i class="bi bi-hourglass-split me-2"></i>Thời lượng <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select @error('duration') is-invalid @enderror" 
+                                            id="modal_duration" name="duration" required>
+                                        <option value="30" {{ old('duration', '120') == '30' ? 'selected' : '' }}>30 phút</option>
+                                        <option value="60" {{ old('duration', '120') == '60' ? 'selected' : '' }}>1 giờ</option>
+                                        <option value="90" {{ old('duration', '120') == '90' ? 'selected' : '' }}>1.5 giờ</option>
+                                        <option value="120" {{ old('duration', '120') == '120' ? 'selected' : '' }}>2 giờ</option>
+                                        <option value="150" {{ old('duration', '120') == '150' ? 'selected' : '' }}>2.5 giờ</option>
+                                        <option value="180" {{ old('duration', '120') == '180' ? 'selected' : '' }}>3 giờ</option>
+                                        <option value="210" {{ old('duration', '120') == '210' ? 'selected' : '' }}>3.5 giờ</option>
+                                        <option value="240" {{ old('duration', '120') == '240' ? 'selected' : '' }}>4 giờ</option>
+                                    </select>
+                                    @error('duration')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="modal_end_time" class="form-label fw-bold">
+                                        <i class="bi bi-clock-history me-2"></i>Giờ kết thúc <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="time" class="form-control @error('end_time') is-invalid @enderror" 
+                                           id="modal_end_time" name="end_time" 
+                                           value="{{ old('end_time', '20:00') }}" 
+                                           min="08:00" max="22:00" step="1800" required readonly>
+                                    @error('end_time')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>Tự động tính
+                                    </small>
+                                </div>
+                            </div>
+                            <small class="text-muted mb-3 d-block">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Thời gian đặt bàn từ 8:00 - 22:00. Thời lượng tối thiểu 30 phút, tối đa 4 giờ. Hệ thống sẽ tự động kiểm tra xung đột thời gian.
+                            </small>
 
-                        <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg py-3 ripple" style="font-weight: 700;">
-                                <i class="bi bi-check-circle me-2"></i> Đặt Bàn Ngay
-                            </button>
-                            <a href="{{ route('home') }}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left me-2"></i> Quay Lại
-                            </a>
-                        </div>
-                    </form>
+                            <div class="mb-3">
+                                <label for="modal_number_of_guests" class="form-label fw-bold">
+                                    <i class="bi bi-people me-2"></i>Số lượng khách <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control form-control-lg @error('number_of_guests') is-invalid @enderror" 
+                                       id="modal_number_of_guests" name="number_of_guests" 
+                                       value="{{ old('number_of_guests') }}" min="1" max="50" required>
+                                @error('number_of_guests')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="text-muted" id="modalCapacityHint"></small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="modal_notes" class="form-label fw-bold">
+                                    <i class="bi bi-sticky me-2"></i>Ghi chú
+                                </label>
+                                <textarea class="form-control @error('notes') is-invalid @enderror" 
+                                          id="modal_notes" name="notes" rows="3" 
+                                          placeholder="Dị ứng, trẻ em đi kèm, yêu cầu đặc biệt...">{{ old('notes') }}</textarea>
+                                @error('notes')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="button" class="btn btn-primary" id="submitBookingBtn">
+                            <i class="bi bi-check-circle me-2"></i> Đặt Bàn Ngay
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -288,12 +416,17 @@
     
     .table-reserved {
         border-color: #ffb703;
-        background: linear-gradient(135deg, rgba(255, 183, 3, 0.1) 0%, rgba(251, 133, 0, 0.05) 100%);
-        opacity: 0.8;
+        background: linear-gradient(135deg, rgba(255, 183, 3, 0.15) 0%, rgba(251, 133, 0, 0.1) 100%);
+        opacity: 1;
     }
     
     .table-reserved .table-icon i {
         color: #ffb703;
+    }
+    
+    .table-reserved:hover {
+        border-color: #ffb703;
+        box-shadow: 0 5px 15px rgba(255, 183, 3, 0.3);
     }
     
     .table-occupied {
@@ -327,72 +460,543 @@
         font-size: 0.7rem;
         line-height: 1.3;
     }
+    
+    .time-timeline-container {
+        border: 2px solid #dee2e6;
+    }
+    
+    .time-slot {
+        position: absolute;
+        height: 40px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        z-index: 1;
+    }
+    
+    .time-slot:hover {
+        transform: scale(1.05);
+        z-index: 2;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .time-slot.booked {
+        background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    }
+    
+    .time-slot.available {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        opacity: 0.3;
+    }
+    
+    .time-slot.selected {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        z-index: 3;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+    }
+    
+    .time-marker {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background: #dee2e6;
+    }
+    
+    .time-label {
+        position: absolute;
+        top: -20px;
+        font-size: 0.7rem;
+        color: #6c757d;
+        transform: translateX(-50%);
+    }
+    
+    .quick-time-btn {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+    }
+    
+    .quick-time-btn:hover {
+        transform: scale(1.1);
+    }
 </style>
 @endpush
 
 @push('scripts')
 <script>
     $(document).ready(function() {
-        // Table selection - Auto fill form
-        $('.table-card.table-available').click(function() {
+        // Debug: Check if elements exist
+        console.log('Available tables:', $('.table-card.table-available').length);
+        console.log('Modal exists:', $('#bookingModal').length > 0);
+        console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+        
+        // Reload page when booking date changes to show bookings for that date
+        $('#booking_date').on('change', function() {
+            const selectedDate = $(this).val();
+            if (selectedDate) {
+                window.location.href = '{{ route("bookings.create") }}?date=' + selectedDate;
+            }
+        });
+
+        // Quick time select buttons - removed (now in modal)
+
+        // Helper function: Convert time string to minutes
+        function timeToMinutes(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        // Render timeline với các booking đã có
+        function renderTimeline() {
+            const bookings = window.currentBookings || @json($selectedDateBookings ?? []);
+            const bookingDate = $('#modal_booking_date').val() || '{{ date('Y-m-d') }}';
+            const $timeline = $('#timeTimeline');
+            $timeline.empty();
+            
+            // Tạo các marker cho mỗi giờ từ 8:00 đến 22:00
+            const startHour = 8;
+            const endHour = 22;
+            const totalMinutes = (endHour - startHour) * 60;
+            const pixelsPerMinute = 6; // 6px per minute
+            const timelineWidth = totalMinutes * pixelsPerMinute;
+            
+            $timeline.css('width', timelineWidth + 'px');
+            
+            // Vẽ các marker giờ
+            for (let hour = startHour; hour <= endHour; hour++) {
+                const minutesFromStart = (hour - startHour) * 60;
+                const left = minutesFromStart * pixelsPerMinute;
+                
+                const $marker = $('<div class="time-marker"></div>').css({
+                    left: left + 'px'
+                });
+                $timeline.append($marker);
+                
+                const $label = $('<div class="time-label"></div>')
+                    .text(String(hour).padStart(2, '0') + ':00')
+                    .css({ left: left + 'px' });
+                $timeline.append($label);
+            }
+            
+            // Vẽ các booking đã có
+            bookings.forEach(function(booking) {
+                if (booking.booking_date !== bookingDate) return;
+                
+                const bookingStart = timeToMinutes(booking.booking_time.substring(0, 5));
+                const bookingEnd = booking.end_time ? timeToMinutes(booking.end_time.substring(0, 5)) : bookingStart + 120;
+                const startMinutes = bookingStart - (startHour * 60);
+                const duration = bookingEnd - bookingStart;
+                
+                if (startMinutes < 0 || startMinutes + duration > totalMinutes) return;
+                
+                const left = startMinutes * pixelsPerMinute;
+                const width = duration * pixelsPerMinute;
+                
+                const timeRange = booking.booking_time.substring(0, 5) + ' - ' + (booking.end_time ? booking.end_time.substring(0, 5) : '');
+                const $slot = $('<div class="time-slot booked" title="' + booking.customer_name + ' - ' + timeRange + '"></div>')
+                    .css({
+                        left: left + 'px',
+                        width: width + 'px',
+                        top: '10px'
+                    });
+                $timeline.append($slot);
+            });
+            
+            // Highlight khung giờ đang chọn
+            updateTimelineSelection();
+        }
+        
+        // Update timeline selection khi thay đổi giờ
+        function updateTimelineSelection() {
+            $('.time-slot.selected').remove();
+            
+            const bookingTime = $('#modal_booking_time').val();
+            const endTime = $('#modal_end_time').val();
+            
+            if (!bookingTime || !endTime) return;
+            
+            const startHour = 8;
+            const pixelsPerMinute = 6;
+            const bookingStart = timeToMinutes(bookingTime);
+            const bookingEnd = timeToMinutes(endTime);
+            const startMinutes = bookingStart - (startHour * 60);
+            const duration = bookingEnd - bookingStart;
+            
+            if (startMinutes < 0 || duration <= 0) return;
+            
+            const left = startMinutes * pixelsPerMinute;
+            const width = duration * pixelsPerMinute;
+            
+            const $selectedSlot = $('<div class="time-slot selected" title="Khung giờ bạn đang chọn"></div>')
+                .css({
+                    left: left + 'px',
+                    width: width + 'px',
+                    top: '10px'
+                });
+            $('#timeTimeline').append($selectedSlot);
+        }
+        
+        // Render timeline khi trang load
+        renderTimeline();
+
+        // Tự động tính end_time dựa trên booking_time và duration (for modal)
+        function calculateEndTimeModal() {
+            const bookingTime = $('#modal_booking_time').val();
+            const duration = parseInt($('#modal_duration').val()) || 120; // Mặc định 2 giờ
+            
+            if (!bookingTime) {
+                return;
+            }
+            
+            // Chuyển đổi booking_time sang phút
+            const [hours, minutes] = bookingTime.split(':').map(Number);
+            const startMinutes = hours * 60 + minutes;
+            
+            // Tính end_time
+            const endMinutes = startMinutes + duration;
+            const endHours = Math.floor(endMinutes / 60);
+            const endMins = endMinutes % 60;
+            
+            // Đảm bảo không vượt quá 22:00
+            if (endHours > 22 || (endHours === 22 && endMins > 0)) {
+                // Nếu vượt quá 22:00, đặt về 22:00 và điều chỉnh duration
+                $('#modal_end_time').val('22:00');
+                // Có thể hiển thị cảnh báo
+                const maxEndMinutes = 22 * 60;
+                const adjustedDuration = maxEndMinutes - startMinutes;
+                if (adjustedDuration >= 30) {
+                    $('#modal_duration').val(adjustedDuration);
+                }
+            } else {
+                // Format lại thành HH:MM
+                const endTimeStr = String(endHours).padStart(2, '0') + ':' + String(endMins).padStart(2, '0');
+                $('#modal_end_time').val(endTimeStr);
+            }
+            
+            // Update timeline selection
+            updateTimelineSelection();
+        }
+        
+        // Tự động tính end_time khi booking_time hoặc duration thay đổi (in modal)
+        $('#modal_booking_time, #modal_duration').on('change', function() {
+            calculateEndTimeModal();
+        });
+        
+        // Quick time select buttons (in modal)
+        $(document).on('click', '.quick-time-btn', function() {
+            const time = $(this).data('time');
+            $('#modal_booking_time').val(time);
+            calculateEndTimeModal();
+            $(this).addClass('active').siblings().removeClass('active');
+        });
+        
+        // Hiển thị các booking đã đặt trong khung giờ được chọn
+        function checkTimeSlotBookings() {
+            const bookingDate = $('#booking_date').val();
+            const bookingTime = $('#booking_time').val();
+            const endTime = $('#end_time').val();
+            
+            if (!bookingDate || !bookingTime || !endTime) {
+                $('#timeSlotBookings').hide();
+                return;
+            }
+
+            // Lấy danh sách booking từ server (đã có trong selectedDateBookings)
+            const bookings = @json($selectedDateBookings ?? []);
+            const bufferMinutes = 15; // Buffer 15 phút
+            
+            // Chuyển đổi thời gian sang phút để so sánh
+            function timeToMinutes(timeStr) {
+                const [hours, minutes] = timeStr.split(':').map(Number);
+                return hours * 60 + minutes;
+            }
+            
+            const selectedStart = timeToMinutes(bookingTime);
+            const selectedEnd = timeToMinutes(endTime);
+            
+            // Tìm các booking xung đột
+            const conflictingBookings = [];
+            bookings.forEach(function(booking) {
+                if (booking.booking_date !== bookingDate) return;
+                
+                const bookingStart = timeToMinutes(booking.booking_time.substring(0, 5));
+                const bookingEnd = booking.end_time ? timeToMinutes(booking.end_time.substring(0, 5)) : bookingStart + 120;
+                const bookingEndWithBuffer = bookingEnd + bufferMinutes;
+                
+                // Kiểm tra xung đột: selectedStart < bookingEndWithBuffer && bookingStart < selectedEnd
+                if (selectedStart < bookingEndWithBuffer && bookingStart < selectedEnd) {
+                    conflictingBookings.push(booking);
+                }
+            });
+
+            // Hiển thị kết quả
+            if (conflictingBookings.length > 0) {
+                let html = '<ul class="mb-0 ps-3">';
+                conflictingBookings.forEach(function(booking) {
+                    const statusBadge = booking.status === 'pending' 
+                        ? '<span class="badge bg-warning ms-2">Chờ xác nhận</span>'
+                        : booking.status === 'confirmed'
+                        ? '<span class="badge bg-success ms-2">Đã xác nhận</span>'
+                        : '<span class="badge bg-info ms-2">Đã đến</span>';
+                    
+                    const tableInfo = booking.table 
+                        ? ` - Bàn ${booking.table.name}`
+                        : ' - Chưa gán bàn';
+                    
+                    html += `<li class="mb-1">
+                        <strong>${booking.customer_name}</strong> 
+                        (${booking.booking_time.substring(0, 5)}${booking.end_time ? ' - ' + booking.end_time.substring(0, 5) : ''})
+                        ${tableInfo}
+                        ${statusBadge}
+                    </li>`;
+                });
+                html += '</ul>';
+                $('#conflictingBookingsList').html(html);
+                $('#timeSlotBookings').show();
+            } else {
+                $('#timeSlotBookings').hide();
+            }
+        }
+
+        // Removed old booking_time/booking_date handlers (now in modal)
+
+        // Table selection - Fill form and open modal (use event delegation)
+        // Try both selectors to ensure it works
+        $(document).on('click', '.table-card', function(e) {
             const $card = $(this);
+            
+            // Check if table is available
+            if (!$card.hasClass('table-available') && $card.hasClass('table-reserved')) {
+                return; // Don't open modal for reserved tables
+            }
+            
+            // Only proceed if it's an available table
+            if (!$card.hasClass('table-available')) {
+                return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            
             const tableName = $card.find('h6').text();
             const capacity = $card.data('capacity');
             const tableId = $card.data('table-id');
+            
+            console.log('Table clicked:', tableName, capacity, tableId); // Debug
+            
             // Get area from data attribute or from parent container
             let area = $card.data('area');
             if (!area) {
                 area = $card.closest('.table-area').data('area') || $card.closest('.mb-5').find('h5').text().replace(/[📍\s]/g, '').trim();
             }
             
-            if ($card.hasClass('selected')) {
-                // Deselect
-                $card.removeClass('selected');
-                $('#selectedTableInfo').hide();
-                $('#capacityHint').text('');
-            } else {
-                // Select
-                $('.table-card').removeClass('selected');
-                $card.addClass('selected');
-                
-                // Auto fill form
-                $('#number_of_guests').val(capacity);
-                $('#capacityHint').text(`Gợi ý: Bàn này có thể chứa tối đa ${capacity} người`);
-                
-                // Auto set location preference based on area (hidden field)
-                const locationInput = $('#location_preference');
-                let locationValue = '';
-                
-                if (area) {
-                    // Map area to location preference
-                    if (area.includes('Tầng 1') || area === 'Tầng 1') {
-                        locationValue = 'Tầng 1';
-                    } else if (area.includes('Tầng 2') || area === 'Tầng 2') {
-                        locationValue = 'Tầng 2';
-                    } else if (area.includes('VIP') || area.includes('Phòng')) {
-                        locationValue = 'Phòng riêng';
-                    } else if (area.includes('cửa sổ') || area.includes('Gần cửa sổ')) {
-                        locationValue = 'Gần cửa sổ';
-                    } else if (area.includes('yên tĩnh') || area.includes('Yên tĩnh')) {
-                        locationValue = 'Khu vực yên tĩnh';
-                    }
-                    
-                    if (locationValue) {
-                        locationInput.val(locationValue);
-                    }
+            // Set location preference
+            let locationValue = '';
+            if (area) {
+                if (area.includes('Tầng 1') || area === 'Tầng 1') {
+                    locationValue = 'Tầng 1';
+                } else if (area.includes('Tầng 2') || area === 'Tầng 2') {
+                    locationValue = 'Tầng 2';
+                } else if (area.includes('VIP') || area.includes('Phòng')) {
+                    locationValue = 'Phòng riêng';
+                } else if (area.includes('cửa sổ') || area.includes('Gần cửa sổ')) {
+                    locationValue = 'Gần cửa sổ';
+                } else if (area.includes('yên tĩnh') || area.includes('Yên tĩnh')) {
+                    locationValue = 'Khu vực yên tĩnh';
                 }
-                
-                // Show selected table info
-                $('#selectedTableName').text(tableName);
-                $('#selectedTableCapacity').text(capacity);
-                $('#selectedTableLocation').text(locationValue || area || 'Tự động');
-                $('#selectedTableInfo').fadeIn();
-                
-                // Scroll to form
-                $('html, body').animate({
-                    scrollTop: $('#bookingForm').offset().top - 100
-                }, 500);
             }
+            
+            // Fill form bên phải
+            $('#number_of_guests').val(capacity);
+            $('#capacityHint').text(`Gợi ý: Bàn này có thể chứa tối đa ${capacity} người`);
+            $('#selectedTableName').text(tableName);
+            $('#selectedTableCapacity').text(capacity);
+            $('#selectedTableLocation').text(locationValue || area || 'Tự động');
+            $('#selectedTableInfo').fadeIn();
+            
+            // Select table card
+            $('.table-card').removeClass('selected');
+            $card.addClass('selected');
+            
+            // Fill modal
+            $('#modalTableName').text(tableName);
+            $('#selected_table_id').val(tableId);
+            $('#modal_number_of_guests').val(capacity);
+            $('#modalCapacityHint').text(`Gợi ý: Bàn này có thể chứa tối đa ${capacity} người`);
+            $('#location_preference').val(locationValue);
+            
+            // Copy data from right form to modal
+            $('#modal_customer_name').val($('#customer_name').val());
+            $('#modal_customer_phone').val($('#customer_phone').val());
+            $('#modal_notes').val($('#notes').val());
+            
+            // Reset date/time
+            const today = new Date().toISOString().split('T')[0];
+            $('#modal_booking_date').val(today);
+            $('#modal_booking_time').val('18:00');
+            $('#modal_duration').val('120');
+            calculateEndTimeModal();
+            
+            // Load bookings for today
+            loadBookingsForDate(today);
+            
+            // Open modal using Bootstrap 5
+            try {
+                const modalElement = document.getElementById('bookingModal');
+                if (modalElement) {
+                    // Wait a bit to ensure DOM is ready
+                    setTimeout(function() {
+                        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                            const bookingModal = new bootstrap.Modal(modalElement);
+                            bookingModal.show();
+                            console.log('Modal opened with Bootstrap'); // Debug
+                        } else {
+                            // Fallback: use jQuery if Bootstrap not available
+                            $('#bookingModal').modal('show');
+                            console.log('Modal opened with jQuery'); // Debug
+                        }
+                    }, 100);
+                } else {
+                    console.error('Modal element not found'); // Debug
+                    alert('Không tìm thấy modal. Vui lòng tải lại trang.');
+                }
+            } catch (error) {
+                console.error('Error opening modal:', error); // Debug
+                // Fallback: try jQuery
+                $('#bookingModal').modal('show');
+            }
+        });
+        
+        // Load bookings when date changes in modal
+        $('#modal_booking_date').on('change', function() {
+            const selectedDate = $(this).val();
+            if (selectedDate) {
+                loadBookingsForDate(selectedDate);
+                // Update timeline date label
+                const dateObj = new Date(selectedDate);
+                const formattedDate = String(dateObj.getDate()).padStart(2, '0') + '/' + 
+                                     String(dateObj.getMonth() + 1).padStart(2, '0') + '/' + 
+                                     dateObj.getFullYear();
+                $('#timelineDate').text(formattedDate);
+                // Check conflicts
+                setTimeout(checkModalTimeConflicts, 200);
+            }
+        });
+        
+        // Check conflicts when time changes in modal
+        $('#modal_booking_time, #modal_duration').on('change', function() {
+            calculateEndTimeModal();
+            setTimeout(checkModalTimeConflicts, 200);
+        });
+        
+        // Function to check time conflicts and display in right panel
+        function checkModalTimeConflicts() {
+            const bookingDate = $('#modal_booking_date').val();
+            const bookingTime = $('#modal_booking_time').val();
+            const endTime = $('#modal_end_time').val();
+            
+            if (!bookingDate || !bookingTime || !endTime) {
+                $('#conflictInfo').hide();
+                return;
+            }
+            
+            const bookings = window.currentBookings || [];
+            const bufferMinutes = 15;
+            
+            function timeToMinutes(timeStr) {
+                const [hours, minutes] = timeStr.split(':').map(Number);
+                return hours * 60 + minutes;
+            }
+            
+            const selectedStart = timeToMinutes(bookingTime);
+            const selectedEnd = timeToMinutes(endTime);
+            
+            // Find conflicting bookings
+            const conflictingBookings = [];
+            bookings.forEach(function(booking) {
+                if (booking.booking_date !== bookingDate) return;
+                
+                const bookingStart = timeToMinutes(booking.booking_time.substring(0, 5));
+                const bookingEnd = booking.end_time ? timeToMinutes(booking.end_time.substring(0, 5)) : bookingStart + 120;
+                const bookingEndWithBuffer = bookingEnd + bufferMinutes;
+                
+                // Check conflict: selectedStart < bookingEndWithBuffer && bookingStart < selectedEnd
+                if (selectedStart < bookingEndWithBuffer && bookingStart < selectedEnd) {
+                    conflictingBookings.push(booking);
+                }
+            });
+            
+            // Display in right panel
+            if (conflictingBookings.length > 0) {
+                let html = '<strong>Đã có đặt bàn trùng khung giờ:</strong><ul class="mb-0 ps-3 mt-2">';
+                conflictingBookings.forEach(function(booking) {
+                    const statusBadge = booking.status === 'pending' 
+                        ? '<span class="badge bg-warning ms-2">Chờ xác nhận</span>'
+                        : booking.status === 'confirmed'
+                        ? '<span class="badge bg-success ms-2">Đã xác nhận</span>'
+                        : '<span class="badge bg-info ms-2">Đã đến</span>';
+                    
+                    const tableInfo = booking.table 
+                        ? ` - Bàn ${booking.table.name}`
+                        : ' - Chưa gán bàn';
+                    
+                    html += `<li class="mb-1">
+                        <strong>${booking.customer_name}</strong> 
+                        (${booking.booking_time.substring(0, 5)}${booking.end_time ? ' - ' + booking.end_time.substring(0, 5) : ''})
+                        ${tableInfo}
+                        ${statusBadge}
+                    </li>`;
+                });
+                html += '</ul>';
+                $('#conflictInfoContent').html(html);
+                $('#conflictInfo').removeClass('alert-success').addClass('alert-warning').fadeIn();
+            } else {
+                // Show booking info
+                const dateObj = new Date(bookingDate);
+                const formattedDate = String(dateObj.getDate()).padStart(2, '0') + '/' + 
+                                     String(dateObj.getMonth() + 1).padStart(2, '0') + '/' + 
+                                     dateObj.getFullYear();
+                const html = `<strong>Thông tin đặt bàn:</strong><br>
+                    <i class="bi bi-calendar me-1"></i> Ngày: ${formattedDate}<br>
+                    <i class="bi bi-clock me-1"></i> Giờ: ${bookingTime} - ${endTime}<br>
+                    <span class="badge bg-success mt-2">Khung giờ này có thể đặt</span>`;
+                $('#conflictInfoContent').html(html);
+                $('#conflictInfo').removeClass('alert-warning').addClass('alert-success').fadeIn();
+            }
+        }
+        
+        // Load bookings for a specific date
+        function loadBookingsForDate(date) {
+            $.ajax({
+                url: '/bookings/date/' + date,
+                method: 'GET',
+                success: function(bookings) {
+                    window.currentBookings = bookings;
+                    renderTimeline();
+                },
+                error: function() {
+                    console.error('Error loading bookings');
+                    window.currentBookings = [];
+                    renderTimeline();
+                }
+            });
+        }
+        
+        // Submit booking form - Copy data from right form to modal form before submit
+        $('#submitBookingBtn').on('click', function() {
+            // Copy data from right form to modal form
+            $('#modal_customer_name').val($('#customer_name').val());
+            $('#modal_customer_phone').val($('#customer_phone').val());
+            $('#modal_number_of_guests').val($('#number_of_guests').val());
+            $('#modal_notes').val($('#notes').val());
+            
+            // Submit form
+            $('#bookingForm').submit();
         });
         
         // Validate capacity when guests number changes
@@ -412,29 +1016,95 @@
             }
         });
         
-        // Validate time range
-        $('#booking_time, #end_time').on('change', function() {
+        // Validate time duration in real-time
+        function validateTimeDuration() {
             const startTime = $('#booking_time').val();
             const endTime = $('#end_time').val();
+            const $startInput = $('#booking_time');
+            const $endInput = $('#end_time');
             
-            if (startTime && endTime) {
-                const start = new Date('2000-01-01 ' + startTime);
-                const end = new Date('2000-01-01 ' + endTime);
-                const diffMinutes = (end - start) / 1000 / 60;
-                
-                if (diffMinutes < 30) {
-                    $('#end_time').addClass('is-invalid');
-                    alert('Thời gian đặt bàn tối thiểu là 30 phút');
-                } else if (diffMinutes > 240) {
-                    $('#end_time').addClass('is-invalid');
-                    alert('Thời gian đặt bàn tối đa là 4 giờ');
-                } else if (end <= start) {
-                    $('#end_time').addClass('is-invalid');
-                    alert('Thời gian kết thúc phải sau thời gian bắt đầu');
+            // Remove previous error classes
+            $startInput.removeClass('is-invalid');
+            $endInput.removeClass('is-invalid');
+            $('.time-duration-error').remove();
+            
+            if (!startTime || !endTime) {
+                return true;
+            }
+            
+            // Parse times
+            const [startHour, startMin] = startTime.split(':').map(Number);
+            const [endHour, endMin] = endTime.split(':').map(Number);
+            
+            const startMinutes = startHour * 60 + startMin;
+            const endMinutes = endHour * 60 + endMin;
+            
+            let isValid = true;
+            let errorMessage = '';
+            let suggestion = '';
+            
+            // Check if end time is after start time
+            if (endMinutes <= startMinutes) {
+                isValid = false;
+                // Provide helpful suggestion
+                if (endHour < 12 && startHour >= 12) {
+                    // End time is AM, start time is PM - likely user meant PM for end time
+                    const suggestedEndHour = endHour + 12;
+                    suggestion = ` Gợi ý: Có thể bạn muốn chọn ${String(suggestedEndHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')} (PM)?`;
+                } else if (endHour >= 12 && startHour < 12) {
+                    // End time is PM, start time is AM - this is valid, but check duration
+                    const diffMinutes = (24 * 60 - startMinutes) + endMinutes;
+                    if (diffMinutes < 30) {
+                        errorMessage = 'Thời gian đặt bàn tối thiểu là 30 phút.';
+                    } else if (diffMinutes > 240) {
+                        errorMessage = 'Thời gian đặt bàn tối đa là 4 giờ.';
+                    } else {
+                        isValid = true; // Valid overnight booking (though unlikely for restaurant)
+                    }
                 } else {
-                    $('#end_time').removeClass('is-invalid');
+                    errorMessage = 'Thời gian kết thúc phải sau thời gian bắt đầu.';
+                }
+                
+                if (!isValid) {
+                    errorMessage += suggestion;
+                    $endInput.addClass('is-invalid');
+                }
+            } else {
+                const diffMinutes = endMinutes - startMinutes;
+                
+                // Check minimum duration (30 minutes)
+                if (diffMinutes < 30) {
+                    isValid = false;
+                    const suggestedEndMinutes = startMinutes + 30;
+                    const suggestedHour = Math.floor(suggestedEndMinutes / 60);
+                    const suggestedMin = suggestedEndMinutes % 60;
+                    errorMessage = `Thời gian đặt bàn tối thiểu là 30 phút. Gợi ý: Chọn ${String(suggestedHour).padStart(2, '0')}:${String(suggestedMin).padStart(2, '0')}?`;
+                    $endInput.addClass('is-invalid');
+                }
+                // Check maximum duration (4 hours = 240 minutes)
+                else if (diffMinutes > 240) {
+                    isValid = false;
+                    const suggestedEndMinutes = startMinutes + 240;
+                    const suggestedHour = Math.floor(suggestedEndMinutes / 60);
+                    const suggestedMin = suggestedEndMinutes % 60;
+                    errorMessage = `Thời gian đặt bàn tối đa là 4 giờ. Gợi ý: Chọn ${String(suggestedHour).padStart(2, '0')}:${String(suggestedMin).padStart(2, '0')}?`;
+                    $endInput.addClass('is-invalid');
                 }
             }
+            
+            // Display error message
+            if (!isValid) {
+                const errorHtml = `<div class="invalid-feedback time-duration-error d-block">${errorMessage}</div>`;
+                $endInput.after(errorHtml);
+            }
+            
+            return isValid;
+        }
+
+        // Validate on time change
+        $('#booking_time, #end_time').on('change blur', function() {
+            validateTimeDuration();
+            checkTimeSlotBookings();
         });
         
         // Form submission with selected table info
@@ -452,15 +1122,23 @@
                 }
             }
             
-            // Validate time range before submit
+            // Validate time duration before submit
+            if (!validateTimeDuration()) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Validate time range
             const startTime = $('#booking_time').val();
             const endTime = $('#end_time').val();
             if (startTime && endTime) {
-                const start = new Date('2000-01-01 ' + startTime);
-                const end = new Date('2000-01-01 ' + endTime);
-                const diffMinutes = (end - start) / 1000 / 60;
+                const [startHour, startMin] = startTime.split(':').map(Number);
+                const [endHour, endMin] = endTime.split(':').map(Number);
+                const startMinutes = startHour * 60 + startMin;
+                const endMinutes = endHour * 60 + endMin;
+                const diffMinutes = endMinutes - startMinutes;
                 
-                if (diffMinutes < 30 || diffMinutes > 240 || end <= start) {
+                if (diffMinutes < 30 || diffMinutes > 240 || endMinutes <= startMinutes) {
                     e.preventDefault();
                     alert('Vui lòng kiểm tra lại thời gian đặt bàn. Thời gian đặt bàn phải từ 30 phút đến 4 giờ.');
                     return false;

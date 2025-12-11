@@ -28,8 +28,8 @@ class Booking extends Model
 
     protected $casts = [
         'booking_date' => 'date',
-        'booking_time' => 'datetime:H:i',
-        'end_time' => 'datetime:H:i',
+        'booking_time' => 'string',
+        'end_time' => 'string',
         'confirmed_at' => 'datetime',
     ];
 

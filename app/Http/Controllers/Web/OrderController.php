@@ -149,16 +149,19 @@ class OrderController extends Controller
                 $voucher->increment('used_count');
             }
             
-            // Create notification for staff if booking is confirmed
+            // Create notification for each staff member if booking is confirmed
             if ($booking && $booking->status === 'confirmed') {
+                $staffMembers = \App\Models\User::whereIn('role', ['admin', 'staff', 'cashier', 'kitchen_manager'])->get();
+                foreach ($staffMembers as $staff) {
                 \App\Models\Notification::create([
-                    'user_id' => null, // For all staff
+                        'user_id' => $staff->id,
                     'type' => 'new_order',
                     'title' => 'Đơn hàng mới từ đặt bàn',
                     'message' => "Có đơn hàng mới từ đặt bàn #{$booking->id}",
                     'notifiable_type' => Order::class,
                     'notifiable_id' => $order->id,
                 ]);
+                }
             }
 
             // Create order items
@@ -232,15 +235,18 @@ class OrderController extends Controller
                 $order->voucher->decrement('used_count');
             }
 
-            // Create notification for staff
+            // Create notification for each staff member
+            $staffMembers = \App\Models\User::whereIn('role', ['admin', 'staff', 'cashier', 'kitchen_manager'])->get();
+            foreach ($staffMembers as $staff) {
             \App\Models\Notification::create([
-                'user_id' => null,
+                    'user_id' => $staff->id,
                 'type' => 'order_cancelled',
                 'title' => 'Đơn hàng bị hủy',
                 'message' => "Đơn hàng #{$order->order_number} đã bị khách hàng hủy",
                 'notifiable_type' => Order::class,
                 'notifiable_id' => $order->id,
             ]);
+            }
 
             DB::commit();
 

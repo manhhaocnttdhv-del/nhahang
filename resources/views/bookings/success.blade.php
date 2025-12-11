@@ -32,9 +32,39 @@
                                     <strong>Số khách:</strong> {{ $booking->number_of_guests }} người
                                 </div>
                                 <div class="col-md-6 mb-2">
-                                    <strong>Trạng thái:</strong> 
-                                    <span class="badge bg-warning">Chờ xác nhận</span>
+                                    <strong>Bàn:</strong> 
+                                    @if($booking->table)
+                                        {{ $booking->table->name }} ({{ $booking->table->number }})
+                                    @else
+                                        <span class="text-muted">Chưa gán bàn</span>
+                                    @endif
                                 </div>
+                                <div class="col-md-6 mb-2">
+                                    <strong>Trạng thái:</strong> 
+                                    @if($booking->status === 'pending')
+                                    <span class="badge bg-warning">Chờ xác nhận</span>
+                                    @elseif($booking->status === 'confirmed')
+                                        <span class="badge bg-success">Đã xác nhận</span>
+                                    @elseif($booking->status === 'rejected')
+                                        <span class="badge bg-danger">Đã từ chối</span>
+                                    @elseif($booking->status === 'checked_in')
+                                        <span class="badge bg-info">Đã check-in</span>
+                                    @elseif($booking->status === 'completed')
+                                        <span class="badge bg-secondary">Đã hoàn thành</span>
+                                    @else
+                                        <span class="badge bg-secondary">Đã hủy</span>
+                                    @endif
+                                </div>
+                                @if($booking->location_preference)
+                                <div class="col-md-6 mb-2">
+                                    <strong>Yêu cầu:</strong> {{ $booking->location_preference }}
+                                </div>
+                                @endif
+                                @if($booking->notes)
+                                <div class="col-12 mb-2">
+                                    <strong>Ghi chú:</strong> {{ $booking->notes }}
+                                </div>
+                                @endif
                             </div>
                         </div>
                     </div>

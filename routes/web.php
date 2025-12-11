@@ -48,6 +48,7 @@ Route::middleware('auth')->group(function () {
     // Customer routes
     Route::prefix('bookings')->name('bookings.')->group(function () {
         Route::get('/', [BookingController::class, 'index'])->name('index');
+        Route::get('/date/{date}', [BookingController::class, 'getBookingsByDate'])->name('date');
         Route::get('/create', [BookingController::class, 'create'])->name('create');
         Route::post('/', [BookingController::class, 'store'])->name('store');
         Route::get('/{id}/success', [BookingController::class, 'success'])->name('success');

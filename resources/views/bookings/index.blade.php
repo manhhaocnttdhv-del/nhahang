@@ -69,15 +69,19 @@
                                 </div>
                                 <p class="mb-0">{{ $booking->number_of_guests }} người</p>
                             </div>
-                            @if($booking->table)
                             <div class="col-6">
                                 <div class="d-flex align-items-center mb-2">
                                     <i class="bi bi-table text-warning me-2"></i>
                                     <strong>Bàn:</strong>
                                 </div>
-                                <p class="mb-0">{{ $booking->table->name }} ({{ $booking->table->number }})</p>
+                                <p class="mb-0">
+                                    @if($booking->table)
+                                        {{ $booking->table->name }} ({{ $booking->table->number }})
+                                    @else
+                                        <span class="text-muted">Chưa gán bàn</span>
+                                    @endif
+                                </p>
                             </div>
-                            @endif
                             @if($booking->location_preference)
                             <div class="col-12">
                                 <div class="d-flex align-items-center mb-2">

@@ -32,14 +32,18 @@ class BookingController extends Controller
             'status' => 'pending',
         ]);
 
-        // Create notification for staff
+        // Create notification for each staff member
+        $staffMembers = \App\Models\User::whereIn('role', ['admin', 'staff', 'cashier', 'kitchen_manager'])->get();
+        foreach ($staffMembers as $staff) {
         Notification::create([
+                'user_id' => $staff->id,
             'type' => 'new_booking',
             'title' => 'Đặt bàn mới',
             'message' => "Có đặt bàn mới từ {$request->customer_name} vào {$request->booking_date} lúc {$request->booking_time}",
             'notifiable_type' => Booking::class,
             'notifiable_id' => $booking->id,
         ]);
+        }
 
         return response()->json([
             'message' => 'Đặt bàn thành công. Vui lòng chờ xác nhận.',

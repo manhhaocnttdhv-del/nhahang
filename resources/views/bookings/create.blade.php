@@ -139,64 +139,64 @@
                     </h4>
                 </div>
                 <div class="card-body p-4">
-                    <div class="mb-3">
-                        <label for="customer_name" class="form-label fw-bold">
-                            <i class="bi bi-person me-2"></i>Họ và tên <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control form-control-lg @error('customer_name') is-invalid @enderror" 
-                               id="customer_name" name="customer_name" 
-                               value="{{ old('customer_name', auth()->user()->name ?? '') }}" required>
-                        @error('customer_name')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="customer_phone" class="form-label fw-bold">
-                            <i class="bi bi-telephone me-2"></i>Số điện thoại <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control form-control-lg @error('customer_phone') is-invalid @enderror" 
-                               id="customer_phone" name="customer_phone" 
-                               value="{{ old('customer_phone', auth()->user()->phone ?? '') }}" required>
-                        @error('customer_phone')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="number_of_guests" class="form-label fw-bold">
-                            <i class="bi bi-people me-2"></i>Số lượng khách <span class="text-danger">*</span>
-                        </label>
-                        <input type="number" class="form-control form-control-lg @error('number_of_guests') is-invalid @enderror" 
-                               id="number_of_guests" name="number_of_guests" 
-                               value="{{ old('number_of_guests') }}" min="1" max="50" required>
-                        @error('number_of_guests')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        <small class="text-muted" id="capacityHint"></small>
-                    </div>
-                    
-                    <div class="mb-3" id="selectedTableInfo" style="display: none;">
-                        <div class="alert alert-info mb-0">
-                            <i class="bi bi-info-circle me-2"></i>
-                            <strong>Bàn đã chọn:</strong> <span id="selectedTableName"></span> 
-                            (Sức chứa: <span id="selectedTableCapacity"></span> người)
-                            <br>
-                            <small><i class="bi bi-geo-alt me-1"></i>Vị trí: <span id="selectedTableLocation"></span></small>
+                        <div class="mb-3">
+                            <label for="customer_name" class="form-label fw-bold">
+                                <i class="bi bi-person me-2"></i>Họ và tên <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control form-control-lg @error('customer_name') is-invalid @enderror" 
+                                   id="customer_name" name="customer_name" 
+                                   value="{{ old('customer_name', auth()->user()->name ?? '') }}" required>
+                            @error('customer_name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
-                    </div>
 
-                    <div class="mb-3">
-                        <label for="notes" class="form-label fw-bold">
-                            <i class="bi bi-sticky me-2"></i>Ghi chú
-                        </label>
-                        <textarea class="form-control @error('notes') is-invalid @enderror" 
-                                  id="notes" name="notes" rows="3" 
-                                  placeholder="Dị ứng, trẻ em đi kèm, yêu cầu đặc biệt...">{{ old('notes') }}</textarea>
-                        @error('notes')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+                        <div class="mb-3">
+                            <label for="customer_phone" class="form-label fw-bold">
+                                <i class="bi bi-telephone me-2"></i>Số điện thoại <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control form-control-lg @error('customer_phone') is-invalid @enderror" 
+                                   id="customer_phone" name="customer_phone" 
+                                   value="{{ old('customer_phone', auth()->user()->phone ?? '') }}" required>
+                            @error('customer_phone')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="number_of_guests" class="form-label fw-bold">
+                                <i class="bi bi-people me-2"></i>Số lượng khách <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control form-control-lg @error('number_of_guests') is-invalid @enderror" 
+                                   id="number_of_guests" name="number_of_guests" 
+                                   value="{{ old('number_of_guests') }}" min="1" max="50" required>
+                            @error('number_of_guests')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="text-muted" id="capacityHint"></small>
+                        </div>
+                        
+                        <div class="mb-3" id="selectedTableInfo" style="display: none;">
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Bàn đã chọn:</strong> <span id="selectedTableName"></span> 
+                                (Sức chứa: <span id="selectedTableCapacity"></span> người)
+                                <br>
+                                <small><i class="bi bi-geo-alt me-1"></i>Vị trí: <span id="selectedTableLocation"></span></small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label fw-bold">
+                                <i class="bi bi-sticky me-2"></i>Ghi chú
+                            </label>
+                            <textarea class="form-control @error('notes') is-invalid @enderror" 
+                                      id="notes" name="notes" rows="3" 
+                                      placeholder="Dị ứng, trẻ em đi kèm, yêu cầu đặc biệt...">{{ old('notes') }}</textarea>
+                            @error('notes')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
 
                     <!-- Hiển thị thông tin xung đột khi chọn ngày/giờ -->
                     <div id="conflictInfo" class="mb-3" style="display: none;">
@@ -372,8 +372,8 @@
                                 @error('notes')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
-                            </div>
-                        </form>
+                        </div>
+                    </form>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
@@ -416,6 +416,8 @@
         border-color: #ffb703;
         background: linear-gradient(135deg, rgba(255, 183, 3, 0.15) 0%, rgba(251, 133, 0, 0.1) 100%);
         opacity: 1;
+        pointer-events: auto !important;
+        cursor: pointer !important;
     }
     
     .table-reserved .table-icon i {
@@ -425,16 +427,25 @@
     .table-reserved:hover {
         border-color: #ffb703;
         box-shadow: 0 5px 15px rgba(255, 183, 3, 0.3);
+        transform: translateY(-3px) scale(1.02);
     }
     
     .table-occupied {
         border-color: #667eea;
         background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.05) 100%);
         opacity: 0.7;
+        pointer-events: auto !important;
+        cursor: pointer !important;
     }
     
     .table-occupied .table-icon i {
         color: #667eea;
+    }
+    
+    .table-occupied:hover {
+        border-color: #667eea;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        transform: translateY(-3px) scale(1.02);
     }
     
     .table-maintenance {
@@ -457,6 +468,11 @@
     .booking-info {
         font-size: 0.7rem;
         line-height: 1.3;
+        pointer-events: none;
+    }
+    
+    .table-status-badge {
+        pointer-events: none;
     }
     
     .time-timeline-container {
@@ -754,8 +770,11 @@
         $(document).on('click', '.table-card', function(e) {
             const $card = $(this);
             
+            console.log('Table card clicked!', $card.hasClass('table-maintenance'), $card.hasClass('table-reserved'), $card.hasClass('table-occupied')); // Debug
+            
             // Don't allow click on maintenance tables
             if ($card.hasClass('table-maintenance')) {
+                console.log('Maintenance table, blocking click');
                 return;
             }
             
@@ -768,7 +787,7 @@
             const capacity = $card.data('capacity');
             const tableId = $card.data('table-id');
             
-            console.log('Table clicked:', tableName, capacity, tableId); // Debug
+            console.log('Table clicked:', tableName, capacity, tableId, 'Classes:', $card.attr('class')); // Debug
             
             // Get area from data attribute or from parent container
             let area = $card.data('area');
@@ -777,29 +796,29 @@
             }
             
             // Set location preference
-            let locationValue = '';
-            if (area) {
-                if (area.includes('Tầng 1') || area === 'Tầng 1') {
-                    locationValue = 'Tầng 1';
-                } else if (area.includes('Tầng 2') || area === 'Tầng 2') {
-                    locationValue = 'Tầng 2';
-                } else if (area.includes('VIP') || area.includes('Phòng')) {
-                    locationValue = 'Phòng riêng';
-                } else if (area.includes('cửa sổ') || area.includes('Gần cửa sổ')) {
-                    locationValue = 'Gần cửa sổ';
-                } else if (area.includes('yên tĩnh') || area.includes('Yên tĩnh')) {
-                    locationValue = 'Khu vực yên tĩnh';
+                let locationValue = '';
+                if (area) {
+                    if (area.includes('Tầng 1') || area === 'Tầng 1') {
+                        locationValue = 'Tầng 1';
+                    } else if (area.includes('Tầng 2') || area === 'Tầng 2') {
+                        locationValue = 'Tầng 2';
+                    } else if (area.includes('VIP') || area.includes('Phòng')) {
+                        locationValue = 'Phòng riêng';
+                    } else if (area.includes('cửa sổ') || area.includes('Gần cửa sổ')) {
+                        locationValue = 'Gần cửa sổ';
+                    } else if (area.includes('yên tĩnh') || area.includes('Yên tĩnh')) {
+                        locationValue = 'Khu vực yên tĩnh';
+                    }
                 }
-            }
-            
+                
             // Fill form bên phải
             $('#number_of_guests').val(capacity);
             $('#capacityHint').text(`Gợi ý: Bàn này có thể chứa tối đa ${capacity} người`);
-            $('#selectedTableName').text(tableName);
-            $('#selectedTableCapacity').text(capacity);
-            $('#selectedTableLocation').text(locationValue || area || 'Tự động');
-            $('#selectedTableInfo').fadeIn();
-            
+                $('#selectedTableName').text(tableName);
+                $('#selectedTableCapacity').text(capacity);
+                $('#selectedTableLocation').text(locationValue || area || 'Tự động');
+                $('#selectedTableInfo').fadeIn();
+                
             // Select table card
             $('.table-card').removeClass('selected');
             $card.addClass('selected');
@@ -1087,9 +1106,9 @@
                 } else if (endHour >= 12 && startHour < 12) {
                     // End time is PM, start time is AM - this is valid, but check duration
                     const diffMinutes = (24 * 60 - startMinutes) + endMinutes;
-                    if (diffMinutes < 30) {
+                if (diffMinutes < 30) {
                         errorMessage = 'Thời gian đặt bàn tối thiểu là 30 phút.';
-                    } else if (diffMinutes > 240) {
+                } else if (diffMinutes > 240) {
                         errorMessage = 'Thời gian đặt bàn tối đa là 4 giờ.';
                     } else {
                         isValid = true; // Valid overnight booking (though unlikely for restaurant)

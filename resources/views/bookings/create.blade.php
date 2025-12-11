@@ -270,22 +270,20 @@
                                 @enderror
                             </div>
 
-                            <!-- Timeline hiển thị các khung giờ đã đặt -->
+                            <!-- Hiển thị các giờ đã đặt của bàn này -->
                             <div class="mb-4">
                                 <label class="form-label fw-bold mb-2">
-                                    <i class="bi bi-calendar-range me-2"></i>Timeline Đặt Bàn (<span id="timelineDate">{{ date('d/m/Y') }}</span>)
+                                    <i class="bi bi-clock-history me-2"></i>Giờ đã đặt của bàn này (<span id="tableBookingsDate">{{ date('d/m/Y') }}</span>)
                                 </label>
-                                <div class="time-timeline-container" style="background: #f8f9fa; border-radius: 8px; padding: 15px; position: relative; overflow-x: auto;">
-                                    <div class="time-timeline" id="timeTimeline" style="position: relative; height: 60px; min-width: 840px;">
-                                        <!-- Timeline sẽ được render bởi JavaScript -->
+                                <div id="tableBookingsList" class="card" style="background: #f8f9fa;">
+                                    <div class="card-body p-3">
+                                        <div id="tableBookingsContent" class="small">
+                                            <div class="text-center text-muted">
+                                                <i class="bi bi-hourglass-split"></i> Đang tải...
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <small class="text-muted d-block mt-2">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    <span class="badge bg-success me-2" style="width: 12px; height: 12px; display: inline-block; padding: 0;"></span> Trống
-                                    <span class="badge bg-warning me-2" style="width: 12px; height: 12px; display: inline-block; padding: 0;"></span> Đã đặt
-                                    <span class="badge bg-danger me-2" style="width: 12px; height: 12px; display: inline-block; padding: 0;"></span> Đang chọn
-                                </small>
                             </div>
 
                             <div class="row mb-3">
@@ -552,98 +550,51 @@
             return hours * 60 + minutes;
         }
 
-        // Render timeline với các booking đã có
-        function renderTimeline() {
-            const bookings = window.currentBookings || @json($selectedDateBookings ?? []);
+        // Load và hiển thị các booking của bàn đã chọn
+        function loadTableBookings() {
+            const tableId = $('#selected_table_id').val();
             const bookingDate = $('#modal_booking_date').val() || '{{ date('Y-m-d') }}';
-            const $timeline = $('#timeTimeline');
-            $timeline.empty();
             
-            // Tạo các marker cho mỗi giờ từ 8:00 đến 22:00
-            const startHour = 8;
-            const endHour = 22;
-            const totalMinutes = (endHour - startHour) * 60;
-            const pixelsPerMinute = 6; // 6px per minute
-            const timelineWidth = totalMinutes * pixelsPerMinute;
-            
-            $timeline.css('width', timelineWidth + 'px');
-            
-            // Vẽ các marker giờ
-            for (let hour = startHour; hour <= endHour; hour++) {
-                const minutesFromStart = (hour - startHour) * 60;
-                const left = minutesFromStart * pixelsPerMinute;
-                
-                const $marker = $('<div class="time-marker"></div>').css({
-                    left: left + 'px'
-                });
-                $timeline.append($marker);
-                
-                const $label = $('<div class="time-label"></div>')
-                    .text(String(hour).padStart(2, '0') + ':00')
-                    .css({ left: left + 'px' });
-                $timeline.append($label);
+            if (!tableId) {
+                $('#tableBookingsContent').html('<div class="text-center text-muted"><i class="bi bi-info-circle"></i> Chưa chọn bàn</div>');
+                return;
             }
             
-            // Vẽ các booking đã có
-            bookings.forEach(function(booking) {
-                if (booking.booking_date !== bookingDate) return;
-                
-                const bookingStart = timeToMinutes(booking.booking_time.substring(0, 5));
-                const bookingEnd = booking.end_time ? timeToMinutes(booking.end_time.substring(0, 5)) : bookingStart + 120;
-                const startMinutes = bookingStart - (startHour * 60);
-                const duration = bookingEnd - bookingStart;
-                
-                if (startMinutes < 0 || startMinutes + duration > totalMinutes) return;
-                
-                const left = startMinutes * pixelsPerMinute;
-                const width = duration * pixelsPerMinute;
-                
-                const timeRange = booking.booking_time.substring(0, 5) + ' - ' + (booking.end_time ? booking.end_time.substring(0, 5) : '');
-                const $slot = $('<div class="time-slot booked" title="' + booking.customer_name + ' - ' + timeRange + '"></div>')
-                    .css({
-                        left: left + 'px',
-                        width: width + 'px',
-                        top: '10px'
-                    });
-                $timeline.append($slot);
+            const bookings = window.currentBookings || [];
+            const tableBookings = bookings.filter(function(booking) {
+                return booking.booking_date === bookingDate && 
+                       booking.table && 
+                       booking.table.id == tableId;
             });
             
-            // Highlight khung giờ đang chọn
-            updateTimelineSelection();
-        }
-        
-        // Update timeline selection khi thay đổi giờ
-        function updateTimelineSelection() {
-            $('.time-slot.selected').remove();
-            
-            const bookingTime = $('#modal_booking_time').val();
-            const endTime = $('#modal_end_time').val();
-            
-            if (!bookingTime || !endTime) return;
-            
-            const startHour = 8;
-            const pixelsPerMinute = 6;
-            const bookingStart = timeToMinutes(bookingTime);
-            const bookingEnd = timeToMinutes(endTime);
-            const startMinutes = bookingStart - (startHour * 60);
-            const duration = bookingEnd - bookingStart;
-            
-            if (startMinutes < 0 || duration <= 0) return;
-            
-            const left = startMinutes * pixelsPerMinute;
-            const width = duration * pixelsPerMinute;
-            
-            const $selectedSlot = $('<div class="time-slot selected" title="Khung giờ bạn đang chọn"></div>')
-                .css({
-                    left: left + 'px',
-                    width: width + 'px',
-                    top: '10px'
+            if (tableBookings.length === 0) {
+                $('#tableBookingsContent').html('<div class="text-center text-success"><i class="bi bi-check-circle"></i> Bàn này chưa có đặt bàn nào trong ngày này</div>');
+            } else {
+                let html = '<div class="list-group list-group-flush">';
+                tableBookings.forEach(function(booking) {
+                    const statusBadge = booking.status === 'pending' 
+                        ? '<span class="badge bg-warning">Chờ xác nhận</span>'
+                        : booking.status === 'confirmed'
+                        ? '<span class="badge bg-success">Đã xác nhận</span>'
+                        : '<span class="badge bg-info">Đã đến</span>';
+                    
+                    const timeRange = booking.booking_time.substring(0, 5) + 
+                                    (booking.end_time ? ' - ' + booking.end_time.substring(0, 5) : '');
+                    
+                    html += `<div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${booking.customer_name}</strong><br>
+                            <small class="text-muted">
+                                <i class="bi bi-clock"></i> ${timeRange}
+                            </small>
+                        </div>
+                        ${statusBadge}
+                    </div>`;
                 });
-            $('#timeTimeline').append($selectedSlot);
+                html += '</div>';
+                $('#tableBookingsContent').html(html);
+            }
         }
-        
-        // Render timeline khi trang load
-        renderTimeline();
 
         // Tự động tính end_time dựa trên booking_time và duration (for modal)
         function calculateEndTimeModal() {
@@ -679,8 +630,8 @@
                 $('#modal_end_time').val(endTimeStr);
             }
             
-            // Update timeline selection
-            updateTimelineSelection();
+            // Load table bookings when time changes
+            loadTableBookings();
         }
         
         // Tự động tính end_time khi booking_time hoặc duration thay đổi (in modal)
@@ -882,7 +833,7 @@
                 const formattedDate = String(dateObj.getDate()).padStart(2, '0') + '/' + 
                                      String(dateObj.getMonth() + 1).padStart(2, '0') + '/' + 
                                      dateObj.getFullYear();
-                $('#timelineDate').text(formattedDate);
+                $('#tableBookingsDate').text(formattedDate);
                 // Check conflicts
                 setTimeout(checkModalTimeConflicts, 200);
             }
@@ -977,12 +928,13 @@
                 method: 'GET',
                 success: function(bookings) {
                     window.currentBookings = bookings;
-                    renderTimeline();
+                    loadTableBookings();
+                    checkModalTimeConflicts();
                 },
                 error: function() {
                     console.error('Error loading bookings');
                     window.currentBookings = [];
-                    renderTimeline();
+                    loadTableBookings();
                 }
             });
         }

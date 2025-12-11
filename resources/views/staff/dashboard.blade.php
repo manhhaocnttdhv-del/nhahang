@@ -64,7 +64,13 @@
                                 @forelse($recentBookings ?? [] as $booking)
                                     <tr>
                                         <td>{{ $booking->customer_name }}</td>
-                                        <td>{{ $booking->booking_date->format('d/m') }} {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}</td>
+                                        <td>
+                                            {{ $booking->booking_date->format('d/m') }} 
+                                            {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}
+                                            @if($booking->end_time)
+                                                - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                                            @endif
+                                        </td>
                                         <td>{{ $booking->number_of_guests }}</td>
                                         <td>
                                             @if($booking->status === 'pending')

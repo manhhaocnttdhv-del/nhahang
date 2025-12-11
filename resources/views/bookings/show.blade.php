@@ -55,6 +55,9 @@
                                     <strong style="font-size: 1.1rem;">
                                         {{ $booking->booking_date->format('d/m/Y') }} 
                                         {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}
+                                        @if($booking->end_time)
+                                            - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                                        @endif
                                     </strong>
                                 </div>
                             </div>

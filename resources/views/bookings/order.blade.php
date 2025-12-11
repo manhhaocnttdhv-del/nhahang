@@ -16,7 +16,11 @@
                             </h2>
                             <p class="mb-0 opacity-75">
                                 <i class="bi bi-calendar3 me-2"></i>{{ $booking->booking_date->format('d/m/Y') }} 
-                                <i class="bi bi-clock ms-3 me-2"></i>{{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}
+                                <i class="bi bi-clock ms-3 me-2"></i>
+                                {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}
+                                @if($booking->end_time)
+                                    - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                                @endif
                                 <i class="bi bi-people ms-3 me-2"></i>{{ $booking->number_of_guests }} người
                             </p>
                         </div>

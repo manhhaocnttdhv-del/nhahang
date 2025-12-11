@@ -46,7 +46,12 @@
                                 </td>
                                 <td>
                                     {{ $booking->booking_date->format('d/m/Y') }}<br>
-                                    <small>{{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}</small>
+                                    <small>
+                                        {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}
+                                        @if($booking->end_time)
+                                            - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                                        @endif
+                                    </small>
                                 </td>
                                 <td>{{ $booking->number_of_guests }} người</td>
                                 <td>{{ $booking->table ? $booking->table->name : '-' }}</td>

@@ -26,9 +26,18 @@ class StoreBookingRequest extends FormRequest
             'customer_phone' => 'required|string|max:20',
             'booking_date' => 'required|date|after_or_equal:today',
             'booking_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:booking_time',
             'number_of_guests' => 'required|integer|min:1|max:50',
             'location_preference' => 'nullable|string|max:500',
             'notes' => 'nullable|string|max:1000',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'end_time.required' => 'Vui lòng chọn thời gian kết thúc',
+            'end_time.after' => 'Thời gian kết thúc phải sau thời gian bắt đầu',
         ];
     }
 }

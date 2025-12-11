@@ -13,12 +13,19 @@ class BookingController extends Controller
 {
     public function store(StoreBookingRequest $request)
     {
+        // Calculate duration
+        $bookingDateTime = \Carbon\Carbon::parse($request->booking_date . ' ' . $request->booking_time);
+        $endDateTime = \Carbon\Carbon::parse($request->booking_date . ' ' . $request->end_time);
+        $durationMinutes = $bookingDateTime->diffInMinutes($endDateTime);
+
         $booking = Booking::create([
             'user_id' => $request->user()?->id,
             'customer_name' => $request->customer_name,
             'customer_phone' => $request->customer_phone,
             'booking_date' => $request->booking_date,
             'booking_time' => $request->booking_time,
+            'end_time' => $request->end_time,
+            'duration_minutes' => $durationMinutes,
             'number_of_guests' => $request->number_of_guests,
             'location_preference' => $request->location_preference,
             'notes' => $request->notes,

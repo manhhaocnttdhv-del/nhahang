@@ -64,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/bookings/{id}/confirm', [StaffBookingController::class, 'confirm']);
         Route::post('/bookings/{id}/reject', [StaffBookingController::class, 'reject']);
         Route::post('/bookings/{id}/check-in', [StaffBookingController::class, 'checkIn']);
+        Route::post('/bookings/{id}/transfer-table', [StaffBookingController::class, 'transferTable']);
 
         // Orders
         Route::get('/orders', [StaffOrderController::class, 'index']);

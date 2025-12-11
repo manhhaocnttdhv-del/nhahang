@@ -16,6 +16,8 @@ class Booking extends Model
         'customer_phone',
         'booking_date',
         'booking_time',
+        'end_time',
+        'duration_minutes',
         'number_of_guests',
         'location_preference',
         'notes',
@@ -27,6 +29,7 @@ class Booking extends Model
     protected $casts = [
         'booking_date' => 'date',
         'booking_time' => 'datetime:H:i',
+        'end_time' => 'datetime:H:i',
         'confirmed_at' => 'datetime',
     ];
 

@@ -39,14 +39,26 @@ class BookingController extends Controller
 
         // Validate booking date and time
         $bookingDateTime = \Carbon\Carbon::parse($request->booking_date . ' ' . $request->booking_time);
+        $endDateTime = \Carbon\Carbon::parse($request->booking_date . ' ' . $request->end_time);
+        
         if ($bookingDateTime->isPast()) {
             return back()->withErrors(['booking_date' => 'Không thể đặt bàn trong quá khứ']);
         }
 
         // Check if booking time is within business hours (8:00 - 22:00)
         $bookingHour = $bookingDateTime->hour;
-        if ($bookingHour < 8 || $bookingHour >= 22) {
+        $endHour = $endDateTime->hour;
+        if ($bookingHour < 8 || $endHour > 22) {
             return back()->withErrors(['booking_time' => 'Giờ đặt bàn phải từ 8:00 đến 22:00']);
+        }
+
+        // Validate duration (minimum 30 minutes, maximum 4 hours)
+        $durationMinutes = $bookingDateTime->diffInMinutes($endDateTime);
+        if ($durationMinutes < 30) {
+            return back()->withErrors(['end_time' => 'Thời gian đặt bàn tối thiểu là 30 phút']);
+        }
+        if ($durationMinutes > 240) {
+            return back()->withErrors(['end_time' => 'Thời gian đặt bàn tối đa là 4 giờ']);
         }
 
         $booking = Booking::create([
@@ -55,6 +67,8 @@ class BookingController extends Controller
             'customer_phone' => $request->customer_phone,
             'booking_date' => $request->booking_date,
             'booking_time' => $request->booking_time,
+            'end_time' => $request->end_time,
+            'duration_minutes' => $durationMinutes,
             'number_of_guests' => $request->number_of_guests,
             'location_preference' => $request->location_preference,
             'notes' => $request->notes,

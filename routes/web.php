@@ -120,6 +120,7 @@ Route::middleware(['auth', 'staff'])->prefix('staff')->name('staff.')->group(fun
         Route::post('/{id}/confirm', [StaffBookingController::class, 'confirm'])->name('confirm');
         Route::post('/{id}/reject', [StaffBookingController::class, 'reject'])->name('reject');
         Route::post('/{id}/check-in', [StaffBookingController::class, 'checkIn'])->name('check-in');
+        Route::post('/{id}/transfer-table', [StaffBookingController::class, 'transferTable'])->name('transfer-table');
     });
     
     Route::prefix('orders')->name('orders.')->group(function () {

@@ -55,7 +55,12 @@
                                     <i class="bi bi-clock text-success me-2"></i>
                                     <strong>Giờ:</strong>
                                 </div>
-                                <p class="mb-0">{{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}</p>
+                                <p class="mb-0">
+                                    {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}
+                                    @if($booking->end_time)
+                                        - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                                    @endif
+                                </p>
                             </div>
                             <div class="col-6">
                                 <div class="d-flex align-items-center mb-2">

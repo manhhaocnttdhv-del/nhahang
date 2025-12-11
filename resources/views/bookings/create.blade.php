@@ -57,7 +57,12 @@
                                                 @if($hasBooking && $booking)
                                                     <div class="booking-info mt-2 p-2 rounded" style="background: rgba(255,193,7,0.1); font-size: 0.75rem;">
                                                         <div><strong>{{ $booking->customer_name }}</strong></div>
-                                                        <div>{{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}</div>
+                                                        <div>
+                                                            {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}
+                                                            @if($booking->end_time)
+                                                                - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                                                            @endif
+                                                        </div>
                                                     </div>
                                                 @endif
                                                 <div class="table-status-badge mt-2">
@@ -100,8 +105,11 @@
                                     <div class="flex-grow-1">
                                         <strong>{{ $booking->customer_name }}</strong>
                                         <div class="small text-muted">
-                                            {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }} • 
-                                            {{ $booking->number_of_guests }} người
+                                            {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}
+                                            @if($booking->end_time)
+                                                - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                                            @endif
+                                            • {{ $booking->number_of_guests }} người
                                             @if($booking->table)
                                                 • Bàn {{ $booking->table->name }}
                                             @endif
@@ -158,22 +166,23 @@
                             @enderror
                         </div>
 
+                        <div class="mb-3">
+                            <label for="booking_date" class="form-label fw-bold">
+                                <i class="bi bi-calendar me-2"></i>Ngày <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control @error('booking_date') is-invalid @enderror" 
+                                   id="booking_date" name="booking_date" 
+                                   value="{{ old('booking_date', date('Y-m-d')) }}" 
+                                   min="{{ date('Y-m-d') }}" required>
+                            @error('booking_date')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
                         <div class="row mb-3">
                             <div class="col-6">
-                                <label for="booking_date" class="form-label fw-bold">
-                                    <i class="bi bi-calendar me-2"></i>Ngày <span class="text-danger">*</span>
-                                </label>
-                                <input type="date" class="form-control @error('booking_date') is-invalid @enderror" 
-                                       id="booking_date" name="booking_date" 
-                                       value="{{ old('booking_date', date('Y-m-d')) }}" 
-                                       min="{{ date('Y-m-d') }}" required>
-                                @error('booking_date')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-6">
                                 <label for="booking_time" class="form-label fw-bold">
-                                    <i class="bi bi-clock me-2"></i>Giờ <span class="text-danger">*</span>
+                                    <i class="bi bi-clock me-2"></i>Giờ bắt đầu <span class="text-danger">*</span>
                                 </label>
                                 <input type="time" class="form-control @error('booking_time') is-invalid @enderror" 
                                        id="booking_time" name="booking_time" 
@@ -182,7 +191,22 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
+                            <div class="col-6">
+                                <label for="end_time" class="form-label fw-bold">
+                                    <i class="bi bi-clock-history me-2"></i>Giờ kết thúc <span class="text-danger">*</span>
+                                </label>
+                                <input type="time" class="form-control @error('end_time') is-invalid @enderror" 
+                                       id="end_time" name="end_time" 
+                                       value="{{ old('end_time', '20:00') }}" required>
+                                @error('end_time')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
                         </div>
+                        <small class="text-muted mb-3 d-block">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Thời gian đặt bàn tối thiểu 30 phút, tối đa 4 giờ. Hệ thống sẽ tự động kiểm tra xung đột thời gian.
+                        </small>
 
                         <div class="mb-3">
                             <label for="number_of_guests" class="form-label fw-bold">
@@ -388,6 +412,31 @@
             }
         });
         
+        // Validate time range
+        $('#booking_time, #end_time').on('change', function() {
+            const startTime = $('#booking_time').val();
+            const endTime = $('#end_time').val();
+            
+            if (startTime && endTime) {
+                const start = new Date('2000-01-01 ' + startTime);
+                const end = new Date('2000-01-01 ' + endTime);
+                const diffMinutes = (end - start) / 1000 / 60;
+                
+                if (diffMinutes < 30) {
+                    $('#end_time').addClass('is-invalid');
+                    alert('Thời gian đặt bàn tối thiểu là 30 phút');
+                } else if (diffMinutes > 240) {
+                    $('#end_time').addClass('is-invalid');
+                    alert('Thời gian đặt bàn tối đa là 4 giờ');
+                } else if (end <= start) {
+                    $('#end_time').addClass('is-invalid');
+                    alert('Thời gian kết thúc phải sau thời gian bắt đầu');
+                } else {
+                    $('#end_time').removeClass('is-invalid');
+                }
+            }
+        });
+        
         // Form submission with selected table info
         $('#bookingForm').submit(function(e) {
             const selectedTable = $('.table-card.selected');
@@ -399,6 +448,21 @@
                 if (guests > capacity) {
                     e.preventDefault();
                     alert(`Bàn ${tableName} chỉ có thể chứa tối đa ${capacity} người. Vui lòng chọn bàn khác hoặc giảm số lượng khách.`);
+                    return false;
+                }
+            }
+            
+            // Validate time range before submit
+            const startTime = $('#booking_time').val();
+            const endTime = $('#end_time').val();
+            if (startTime && endTime) {
+                const start = new Date('2000-01-01 ' + startTime);
+                const end = new Date('2000-01-01 ' + endTime);
+                const diffMinutes = (end - start) / 1000 / 60;
+                
+                if (diffMinutes < 30 || diffMinutes > 240 || end <= start) {
+                    e.preventDefault();
+                    alert('Vui lòng kiểm tra lại thời gian đặt bàn. Thời gian đặt bàn phải từ 30 phút đến 4 giờ.');
                     return false;
                 }
             }

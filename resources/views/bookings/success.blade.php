@@ -22,7 +22,11 @@
                                     <strong>Ngày:</strong> {{ $booking->booking_date->format('d/m/Y') }}
                                 </div>
                                 <div class="col-md-6 mb-2">
-                                    <strong>Giờ:</strong> {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}
+                                    <strong>Giờ:</strong> 
+                                    {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}
+                                    @if($booking->end_time)
+                                        - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                                    @endif
                                 </div>
                                 <div class="col-md-6 mb-2">
                                     <strong>Số khách:</strong> {{ $booking->number_of_guests }} người

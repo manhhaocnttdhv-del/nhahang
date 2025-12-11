@@ -555,17 +555,49 @@
             const tableId = $('#selected_table_id').val();
             const bookingDate = $('#modal_booking_date').val() || '{{ date('Y-m-d') }}';
             
+            console.log('loadTableBookings - tableId:', tableId, 'bookingDate:', bookingDate); // Debug
+            
             if (!tableId) {
                 $('#tableBookingsContent').html('<div class="text-center text-muted"><i class="bi bi-info-circle"></i> Chưa chọn bàn</div>');
                 return;
             }
             
             const bookings = window.currentBookings || [];
+            console.log('Total bookings:', bookings.length); // Debug
+            
+            // Normalize date format for comparison
+            const normalizeDate = function(dateStr) {
+                if (!dateStr) return '';
+                // Convert to YYYY-MM-DD format
+                if (dateStr.includes('T')) {
+                    return dateStr.split('T')[0];
+                }
+                return dateStr;
+            };
+            
             const tableBookings = bookings.filter(function(booking) {
-                return booking.booking_date === bookingDate && 
-                       booking.table && 
-                       booking.table.id == tableId;
+                const bookingDateNormalized = normalizeDate(booking.booking_date);
+                const selectedDateNormalized = normalizeDate(bookingDate);
+                
+                const matchesDate = bookingDateNormalized === selectedDateNormalized;
+                // Check table_id from multiple sources
+                const bookingTableId = booking.table_id || (booking.table ? booking.table.id : null);
+                const matchesTable = bookingTableId && bookingTableId == tableId;
+                
+                console.log('Booking check:', {
+                    booking_id: booking.id,
+                    booking_date: bookingDateNormalized,
+                    selected_date: selectedDateNormalized,
+                    matches_date: matchesDate,
+                    booking_table_id: bookingTableId,
+                    selected_table_id: tableId,
+                    matches_table: matchesTable
+                }); // Debug
+                
+                return matchesDate && matchesTable;
             });
+            
+            console.log('Table bookings found:', tableBookings.length); // Debug
             
             if (tableBookings.length === 0) {
                 $('#tableBookingsContent').html('<div class="text-center text-success"><i class="bi bi-check-circle"></i> Bàn này chưa có đặt bàn nào trong ngày này</div>');
@@ -828,14 +860,17 @@
             const selectedDate = $(this).val();
             if (selectedDate) {
                 loadBookingsForDate(selectedDate);
-                // Update timeline date label
+                // Update date label
                 const dateObj = new Date(selectedDate);
                 const formattedDate = String(dateObj.getDate()).padStart(2, '0') + '/' + 
                                      String(dateObj.getMonth() + 1).padStart(2, '0') + '/' + 
                                      dateObj.getFullYear();
                 $('#tableBookingsDate').text(formattedDate);
-                // Check conflicts
-                setTimeout(checkModalTimeConflicts, 200);
+                // Load table bookings and check conflicts
+                setTimeout(function() {
+                    loadTableBookings();
+                    checkModalTimeConflicts();
+                }, 200);
             }
         });
         

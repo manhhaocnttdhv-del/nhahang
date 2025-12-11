@@ -43,10 +43,13 @@ class BookingController extends Controller
                 return [
                     'id' => $booking->id,
                     'customer_name' => $booking->customer_name,
-                    'booking_date' => $booking->booking_date,
+                    'booking_date' => $booking->booking_date instanceof \Carbon\Carbon 
+                        ? $booking->booking_date->format('Y-m-d') 
+                        : $booking->booking_date,
                     'booking_time' => $booking->booking_time,
                     'end_time' => $booking->end_time,
                     'status' => $booking->status,
+                    'table_id' => $booking->table_id, // Thêm table_id trực tiếp
                     'table' => $booking->table ? [
                         'id' => $booking->table->id,
                         'name' => $booking->table->name,

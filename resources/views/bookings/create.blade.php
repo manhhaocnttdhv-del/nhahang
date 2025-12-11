@@ -38,10 +38,7 @@
                                         @endphp
                                         <div class="col-md-3 col-6">
                                             <div class="table-card card h-100 text-center p-3 
-                                                {{ $table->status === 'available' && !$hasBooking ? 'table-available' : '' }}
-                                                {{ $table->status === 'reserved' || $hasBooking ? 'table-reserved' : '' }}
-                                                {{ $table->status === 'occupied' ? 'table-occupied' : '' }}
-                                                {{ $table->status === 'maintenance' ? 'table-maintenance' : '' }}"
+                                                {{ $table->status === 'maintenance' ? 'table-maintenance' : 'table-available' }}"
                                                 data-table-id="{{ $table->id }}"
                                                 data-capacity="{{ $table->capacity }}"
                                                 data-area="{{ $table->area ?? '' }}"
@@ -54,26 +51,11 @@
                                                 <div class="mb-2">
                                                     <i class="bi bi-people"></i> {{ $table->capacity }} người
                                                 </div>
-                                                @if($hasBooking && $booking)
-                                                    <div class="booking-info mt-2 p-2 rounded" style="background: rgba(255,193,7,0.1); font-size: 0.75rem;">
-                                                        <div><strong>{{ $booking->customer_name }}</strong></div>
-                                                        <div>
-                                                            {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}
-                                                            @if($booking->end_time)
-                                                                - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                @endif
                                                 <div class="table-status-badge mt-2">
-                                                    @if($table->status === 'available' && !$hasBooking)
-                                                        <span class="badge bg-success">Trống</span>
-                                                    @elseif($table->status === 'reserved' || $hasBooking)
-                                                        <span class="badge bg-warning">Đã đặt</span>
-                                                    @elseif($table->status === 'occupied')
-                                                        <span class="badge bg-danger">Đang dùng</span>
-                                                    @else
+                                                    @if($table->status === 'maintenance')
                                                         <span class="badge bg-secondary">Bảo trì</span>
+                                                    @else
+                                                        <span class="badge bg-success">Trống</span>
                                                     @endif
                                                 </div>
                                             </div>
@@ -852,6 +834,12 @@
             // Load bookings for today
             loadBookingsForDate(today);
             
+            // Reset button state when opening modal
+            $('#submitBookingBtn').prop('disabled', false)
+                .removeClass('btn-secondary')
+                .addClass('btn-primary')
+                .html('<i class="bi bi-check-circle me-2"></i> Đặt Bàn Ngay');
+            
             // Open modal using Bootstrap 5
             try {
                 const modalElement = document.getElementById('bookingModal');
@@ -909,9 +897,11 @@
             const bookingDate = $('#modal_booking_date').val();
             const bookingTime = $('#modal_booking_time').val();
             const endTime = $('#modal_end_time').val();
+            const selectedTableId = $('#selected_table_id').val();
             
             if (!bookingDate || !bookingTime || !endTime) {
                 $('#conflictInfo').hide();
+                $('#submitBookingBtn').prop('disabled', false).removeClass('btn-secondary').addClass('btn-primary');
                 return;
             }
             
@@ -926,10 +916,15 @@
             const selectedStart = timeToMinutes(bookingTime);
             const selectedEnd = timeToMinutes(endTime);
             
-            // Find conflicting bookings
+            // Find conflicting bookings for the selected table
             const conflictingBookings = [];
             bookings.forEach(function(booking) {
                 if (booking.booking_date !== bookingDate) return;
+                
+                // Chỉ kiểm tra conflict với bàn đã chọn
+                if (selectedTableId && booking.table && booking.table.id != selectedTableId) {
+                    return; // Skip bookings from other tables
+                }
                 
                 const bookingStart = timeToMinutes(booking.booking_time.substring(0, 5));
                 const bookingEnd = booking.end_time ? timeToMinutes(booking.end_time.substring(0, 5)) : bookingStart + 120;
@@ -941,9 +936,9 @@
                 }
             });
             
-            // Display in right panel
+            // Display in right panel and disable button if conflict
             if (conflictingBookings.length > 0) {
-                let html = '<strong>Đã có đặt bàn trùng khung giờ:</strong><ul class="mb-0 ps-3 mt-2">';
+                let html = '<strong class="text-danger">⚠️ Đã có đặt bàn trùng khung giờ:</strong><ul class="mb-0 ps-3 mt-2">';
                 conflictingBookings.forEach(function(booking) {
                     const statusBadge = booking.status === 'pending' 
                         ? '<span class="badge bg-warning ms-2">Chờ xác nhận</span>'
@@ -962,9 +957,15 @@
                         ${statusBadge}
                     </li>`;
                 });
-                html += '</ul>';
+                html += '</ul><small class="text-danger d-block mt-2">Vui lòng chọn khung giờ khác hoặc đặt cách 15-30 phút so với các đặt bàn hiện có.</small>';
                 $('#conflictInfoContent').html(html);
                 $('#conflictInfo').removeClass('alert-success').addClass('alert-warning').fadeIn();
+                
+                // Disable submit button
+                $('#submitBookingBtn').prop('disabled', true)
+                    .removeClass('btn-primary')
+                    .addClass('btn-secondary')
+                    .html('<i class="bi bi-x-circle me-2"></i> Không thể đặt (trùng khung giờ)');
             } else {
                 // Show booking info
                 const dateObj = new Date(bookingDate);
@@ -974,9 +975,15 @@
                 const html = `<strong>Thông tin đặt bàn:</strong><br>
                     <i class="bi bi-calendar me-1"></i> Ngày: ${formattedDate}<br>
                     <i class="bi bi-clock me-1"></i> Giờ: ${bookingTime} - ${endTime}<br>
-                    <span class="badge bg-success mt-2">Khung giờ này có thể đặt</span>`;
+                    <span class="badge bg-success mt-2">✓ Khung giờ này có thể đặt</span>`;
                 $('#conflictInfoContent').html(html);
                 $('#conflictInfo').removeClass('alert-warning').addClass('alert-success').fadeIn();
+                
+                // Enable submit button
+                $('#submitBookingBtn').prop('disabled', false)
+                    .removeClass('btn-secondary')
+                    .addClass('btn-primary')
+                    .html('<i class="bi bi-check-circle me-2"></i> Đặt Bàn Ngay');
             }
         }
         

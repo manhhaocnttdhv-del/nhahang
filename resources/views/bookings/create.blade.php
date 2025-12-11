@@ -45,7 +45,7 @@
                                                 data-table-id="{{ $table->id }}"
                                                 data-capacity="{{ $table->capacity }}"
                                                 data-area="{{ $table->area ?? '' }}"
-                                                style="cursor: {{ $table->status === 'available' && !$hasBooking ? 'pointer' : 'not-allowed' }}; transition: all 0.3s;">
+                                                style="cursor: {{ $table->status === 'maintenance' ? 'not-allowed' : 'pointer' }}; transition: all 0.3s;">
                                                 <div class="table-icon mb-2">
                                                     <i class="bi bi-table display-4"></i>
                                                 </div>
@@ -754,15 +754,13 @@
         $(document).on('click', '.table-card', function(e) {
             const $card = $(this);
             
-            // Check if table is available
-            if (!$card.hasClass('table-available') && $card.hasClass('table-reserved')) {
-                return; // Don't open modal for reserved tables
-            }
-            
-            // Only proceed if it's an available table
-            if (!$card.hasClass('table-available')) {
+            // Don't allow click on maintenance tables
+            if ($card.hasClass('table-maintenance')) {
                 return;
             }
+            
+            // Allow click on all other tables (available, reserved, occupied)
+            // Users can still book reserved tables for different time slots
             e.preventDefault();
             e.stopPropagation();
             
@@ -810,7 +808,14 @@
             $('#modalTableName').text(tableName);
             $('#selected_table_id').val(tableId);
             $('#modal_number_of_guests').val(capacity);
-            $('#modalCapacityHint').text(`Gợi ý: Bàn này có thể chứa tối đa ${capacity} người`);
+            
+            // Show warning if table is reserved/occupied
+            if ($card.hasClass('table-reserved') || $card.hasClass('table-occupied')) {
+                $('#modalCapacityHint').html(`<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Bàn này đã có đặt bàn. Bạn vẫn có thể đặt khung giờ khác.</span>`);
+            } else {
+                $('#modalCapacityHint').text(`Gợi ý: Bàn này có thể chứa tối đa ${capacity} người`);
+            }
+            
             $('#location_preference').val(locationValue);
             
             // Copy data from right form to modal
@@ -975,12 +980,53 @@
         }
         
         // Submit booking form - Copy data from right form to modal form before submit
-        $('#submitBookingBtn').on('click', function() {
-            // Copy data from right form to modal form
-            $('#modal_customer_name').val($('#customer_name').val());
-            $('#modal_customer_phone').val($('#customer_phone').val());
-            $('#modal_number_of_guests').val($('#number_of_guests').val());
-            $('#modal_notes').val($('#notes').val());
+        $('#submitBookingBtn').on('click', function(e) {
+            e.preventDefault();
+            
+            // Validate before submit
+            const startTime = $('#modal_booking_time').val();
+            const endTime = $('#modal_end_time').val();
+            const bookingDate = $('#modal_booking_date').val();
+            const guests = parseInt($('#modal_number_of_guests').val()) || 0;
+            const tableId = $('#selected_table_id').val();
+            
+            if (!tableId) {
+                alert('Vui lòng chọn bàn trước khi đặt.');
+                return false;
+            }
+            
+            if (!bookingDate) {
+                alert('Vui lòng chọn ngày đặt bàn.');
+                return false;
+            }
+            
+            if (!startTime || !endTime) {
+                alert('Vui lòng chọn thời gian đặt bàn.');
+                return false;
+            }
+            
+            // Validate time range
+            const [startHour, startMin] = startTime.split(':').map(Number);
+            const [endHour, endMin] = endTime.split(':').map(Number);
+            const startMinutes = startHour * 60 + startMin;
+            const endMinutes = endHour * 60 + endMin;
+            const diffMinutes = endMinutes - startMinutes;
+            
+            if (diffMinutes < 30 || diffMinutes > 240 || endMinutes <= startMinutes) {
+                alert('Vui lòng kiểm tra lại thời gian đặt bàn. Thời gian đặt bàn phải từ 30 phút đến 4 giờ.');
+                return false;
+            }
+            
+            // Validate capacity
+            const selectedTable = $(`.table-card[data-table-id="${tableId}"]`);
+            if (selectedTable.length > 0) {
+                const capacity = selectedTable.data('capacity');
+                if (guests > capacity) {
+                    const tableName = selectedTable.find('h6').text();
+                    alert(`Bàn ${tableName} chỉ có thể chứa tối đa ${capacity} người. Vui lòng chọn bàn khác hoặc giảm số lượng khách.`);
+                    return false;
+                }
+            }
             
             // Submit form
             $('#bookingForm').submit();
@@ -1094,44 +1140,8 @@
             checkTimeSlotBookings();
         });
         
-        // Form submission with selected table info
-        $('#bookingForm').submit(function(e) {
-            const selectedTable = $('.table-card.selected');
-            if (selectedTable.length > 0) {
-                const tableName = selectedTable.find('h6').text();
-                const capacity = selectedTable.data('capacity');
-                const guests = parseInt($('#number_of_guests').val());
-                
-                if (guests > capacity) {
-                    e.preventDefault();
-                    alert(`Bàn ${tableName} chỉ có thể chứa tối đa ${capacity} người. Vui lòng chọn bàn khác hoặc giảm số lượng khách.`);
-                    return false;
-                }
-            }
-            
-            // Validate time duration before submit
-            if (!validateTimeDuration()) {
-                e.preventDefault();
-                return false;
-            }
-            
-            // Validate time range
-            const startTime = $('#booking_time').val();
-            const endTime = $('#end_time').val();
-            if (startTime && endTime) {
-                const [startHour, startMin] = startTime.split(':').map(Number);
-                const [endHour, endMin] = endTime.split(':').map(Number);
-                const startMinutes = startHour * 60 + startMin;
-                const endMinutes = endHour * 60 + endMin;
-                const diffMinutes = endMinutes - startMinutes;
-                
-                if (diffMinutes < 30 || diffMinutes > 240 || endMinutes <= startMinutes) {
-                    e.preventDefault();
-                    alert('Vui lòng kiểm tra lại thời gian đặt bàn. Thời gian đặt bàn phải từ 30 phút đến 4 giờ.');
-                    return false;
-                }
-            }
-        });
+        // Form submission - validation đã được xử lý trong submitBookingBtn click handler
+        // Chỉ để form submit bình thường
     });
 </script>
 @endpush

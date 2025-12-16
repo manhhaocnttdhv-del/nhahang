@@ -47,6 +47,13 @@ class MenuItem extends Model
         return $this->hasMany(Favorite::class);
     }
 
+    public function ingredients()
+    {
+        return $this->belongsToMany(Ingredient::class, 'ingredient_menu_item')
+                    ->withPivot('quantity')
+                    ->withTimestamps();
+    }
+
     public function isAvailable()
     {
         return $this->status === 'available' && $this->is_active;

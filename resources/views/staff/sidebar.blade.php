@@ -13,6 +13,9 @@
         <li><a href="{{ route('staff.payments.index') }}" class="d-block sidebar-item text-decoration-none text-dark {{ request()->routeIs('staff.payments.*') ? 'active' : '' }}">
             <i class="bi bi-cash-coin"></i> Thanh Toán
         </a></li>
+        <li><a href="{{ route('staff.attendance.index') }}" class="d-block sidebar-item text-decoration-none text-dark {{ request()->routeIs('staff.attendance.*') ? 'active' : '' }}">
+            <i class="bi bi-clock-history"></i> Điểm Danh
+        </a></li>
     </ul>
 </div>
 

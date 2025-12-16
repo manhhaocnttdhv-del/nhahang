@@ -713,7 +713,7 @@
                                 <li><a class="dropdown-item" href="{{ route('bookings.index') }}"><i class="bi bi-calendar-check me-2"></i> Đặt bàn</a></li>
                                 <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="bi bi-receipt me-2"></i> Đơn hàng</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                @if(Auth::user()->isStaff())
+                                @if(Auth::user()->isStaff() && !Auth::user()->isAdmin())
                                     <li><a class="dropdown-item" href="{{ route('staff.dashboard') }}">
                                         <i class="bi bi-speedometer2"></i> Dashboard Nhân Viên
                                     </a></li>

@@ -83,6 +83,49 @@
                             <label class="form-check-label">Hiển thị trên menu</label>
                         </div>
 
+                        <hr class="my-4">
+                        <h5 class="mb-3"><i class="bi bi-box-seam"></i> Nguyên Liệu Cần Thiết</h5>
+                        <div class="mb-3">
+                            <p class="text-muted small">Chọn các nguyên liệu và số lượng cần thiết để làm món này</p>
+                            <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                                @forelse($ingredients as $ingredient)
+                                    <div class="row mb-2 align-items-center">
+                                        <div class="col-md-6">
+                                            <label class="form-check-label">
+                                                <input type="checkbox" name="ingredient_check[{{ $ingredient->id }}]" 
+                                                       class="form-check-input ingredient-check" 
+                                                       value="1" 
+                                                       data-ingredient-id="{{ $ingredient->id }}"
+                                                       onchange="toggleIngredientInput({{ $ingredient->id }})">
+                                                <strong>{{ $ingredient->name }}</strong>
+                                                @if($ingredient->code)
+                                                    <small class="text-muted">({{ $ingredient->code }})</small>
+                                                @endif
+                                            </label>
+                                            <br>
+                                            <small class="text-muted">Đơn vị: {{ $ingredient->unit }}</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="input-group">
+                                                <input type="number" 
+                                                       name="ingredients[{{ $ingredient->id }}]" 
+                                                       class="form-control form-control-sm ingredient-quantity" 
+                                                       id="ingredient_qty_{{ $ingredient->id }}"
+                                                       value="{{ old('ingredients.'.$ingredient->id) }}" 
+                                                       min="0.01" 
+                                                       step="0.01" 
+                                                       placeholder="Số lượng"
+                                                       disabled>
+                                                <span class="input-group-text">{{ $ingredient->unit }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <p class="text-muted text-center">Chưa có nguyên liệu nào. <a href="{{ route('admin.ingredients.create') }}">Thêm nguyên liệu</a></p>
+                                @endforelse
+                            </div>
+                        </div>
+
                         <button type="submit" class="btn btn-primary">Thêm Món</button>
                     </form>
                 </div>
@@ -107,6 +150,32 @@ function previewImage(input, previewId) {
         preview.style.display = 'none';
     }
 }
+
+function toggleIngredientInput(ingredientId) {
+    const checkbox = document.querySelector(`input[name="ingredient_check[${ingredientId}]"]`);
+    const quantityInput = document.getElementById(`ingredient_qty_${ingredientId}`);
+    
+    if (checkbox.checked) {
+        quantityInput.disabled = false;
+        quantityInput.focus();
+    } else {
+        quantityInput.disabled = true;
+        quantityInput.value = '';
+    }
+}
+
+// Enable inputs for checked ingredients on page load
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.ingredient-check').forEach(function(checkbox) {
+        if (checkbox.checked) {
+            const ingredientId = checkbox.dataset.ingredientId;
+            const quantityInput = document.getElementById(`ingredient_qty_${ingredientId}`);
+            if (quantityInput) {
+                quantityInput.disabled = false;
+            }
+        }
+    });
+});
 </script>
 @endsection
 

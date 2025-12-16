@@ -1,8 +1,11 @@
 <?php
 
 use App\Http\Controllers\Web\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Web\Admin\IngredientController as AdminIngredientController;
+use App\Http\Controllers\Web\Admin\IngredientStockController as AdminIngredientStockController;
 use App\Http\Controllers\Web\Admin\MenuController as AdminMenuController;
 use App\Http\Controllers\Web\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Web\Admin\SalaryController as AdminSalaryController;
 use App\Http\Controllers\Web\Admin\StaffController as AdminStaffController;
 use App\Http\Controllers\Web\Admin\TableController as AdminTableController;
 use App\Http\Controllers\Web\Admin\VoucherController as AdminVoucherController;
@@ -137,6 +140,12 @@ Route::middleware(['auth', 'staff'])->prefix('staff')->name('staff.')->group(fun
         Route::get('/create/{orderId}', [StaffPaymentController::class, 'create'])->name('create');
         Route::post('/', [StaffPaymentController::class, 'store'])->name('store');
     });
+    
+    Route::prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Web\Staff\AttendanceController::class, 'index'])->name('index');
+        Route::post('/check-in', [\App\Http\Controllers\Web\Staff\AttendanceController::class, 'checkIn'])->name('check-in');
+        Route::post('/check-out', [\App\Http\Controllers\Web\Staff\AttendanceController::class, 'checkOut'])->name('check-out');
+    });
 });
 
 // Admin routes
@@ -184,5 +193,50 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::put('/{id}', [AdminVoucherController::class, 'update'])->name('update');
         Route::delete('/{id}', [AdminVoucherController::class, 'destroy'])->name('destroy');
         Route::put('/{id}/toggle-status', [AdminVoucherController::class, 'toggleStatus'])->name('toggle-status');
+    });
+    
+    Route::prefix('salaries')->name('salaries.')->group(function () {
+        Route::get('/', [AdminSalaryController::class, 'index'])->name('index');
+        Route::get('/create', [AdminSalaryController::class, 'create'])->name('create');
+        Route::post('/', [AdminSalaryController::class, 'store'])->name('store');
+        Route::get('/{id}', [AdminSalaryController::class, 'show'])->name('show');
+        Route::get('/{id}/edit', [AdminSalaryController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [AdminSalaryController::class, 'update'])->name('update');
+    });
+    
+    Route::prefix('ingredients')->name('ingredients.')->group(function () {
+        Route::get('/', [AdminIngredientController::class, 'index'])->name('index');
+        Route::get('/create', [AdminIngredientController::class, 'create'])->name('create');
+        Route::post('/', [AdminIngredientController::class, 'store'])->name('store');
+        Route::get('/{id}', [AdminIngredientController::class, 'show'])->name('show');
+        Route::get('/{id}/edit', [AdminIngredientController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [AdminIngredientController::class, 'update'])->name('update');
+        Route::delete('/{id}', [AdminIngredientController::class, 'destroy'])->name('destroy');
+    });
+    
+    Route::prefix('ingredient-stocks')->name('ingredient-stocks.')->group(function () {
+        Route::get('/', [AdminIngredientStockController::class, 'index'])->name('index');
+        Route::get('/create', [AdminIngredientStockController::class, 'create'])->name('create');
+        Route::post('/', [AdminIngredientStockController::class, 'store'])->name('store');
+    });
+    
+    Route::prefix('attendances')->name('attendances.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Web\Admin\AttendanceController::class, 'index'])->name('index');
+        Route::get('/{userId}', [\App\Http\Controllers\Web\Admin\AttendanceController::class, 'show'])->name('show');
+    });
+    
+    Route::prefix('bookings')->name('bookings.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Web\Admin\BookingController::class, 'index'])->name('index');
+        Route::get('/{id}', [\App\Http\Controllers\Web\Admin\BookingController::class, 'show'])->name('show');
+    });
+    
+    Route::prefix('orders')->name('orders.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Web\Admin\OrderController::class, 'index'])->name('index');
+        Route::get('/{id}', [\App\Http\Controllers\Web\Admin\OrderController::class, 'show'])->name('show');
+    });
+    
+    Route::prefix('payments')->name('payments.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Web\Admin\PaymentController::class, 'index'])->name('index');
+        Route::get('/{id}', [\App\Http\Controllers\Web\Admin\PaymentController::class, 'show'])->name('show');
     });
 });

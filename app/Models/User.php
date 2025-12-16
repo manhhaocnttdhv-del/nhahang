@@ -24,6 +24,9 @@ class User extends Authenticatable
         'role',
         'phone',
         'avatar',
+        'employment_type',
+        'base_salary',
+        'hourly_rate',
     ];
 
     /**
@@ -44,6 +47,8 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'base_salary' => 'decimal:2',
+        'hourly_rate' => 'decimal:2',
     ];
 
     // Relationships
@@ -82,6 +87,16 @@ class User extends Authenticatable
         return $this->hasMany(Address::class);
     }
 
+    public function salaries()
+    {
+        return $this->hasMany(Salary::class);
+    }
+
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
     // Helper methods
     public function isAdmin()
     {
@@ -91,5 +106,15 @@ class User extends Authenticatable
     public function isStaff()
     {
         return in_array($this->role, ['admin', 'staff', 'cashier', 'kitchen_manager']);
+    }
+
+    public function isFullTime()
+    {
+        return $this->employment_type === 'full_time';
+    }
+
+    public function isPartTime()
+    {
+        return $this->employment_type === 'part_time';
     }
 }

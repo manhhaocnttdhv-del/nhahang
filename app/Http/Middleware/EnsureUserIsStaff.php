@@ -15,10 +15,28 @@ class EnsureUserIsStaff
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$request->user() || !$request->user()->isStaff()) {
-            return response()->json([
-                'message' => 'Unauthorized. Staff access required.',
-            ], 403);
+        $user = $request->user();
+        
+        // Admin không được vào staff routes - redirect ngay lập tức
+        if ($user && $user->isAdmin()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Bạn không có quyền truy cập trang này.',
+                ], 403);
+            }
+            return redirect()->route('admin.dashboard')
+                ->with('error', 'Bạn không có quyền truy cập trang này.');
+        }
+
+        // Kiểm tra user có phải staff không
+        if (!$user || !$user->isStaff()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Unauthorized. Staff access required.',
+                ], 403);
+            }
+            return redirect()->route('login')
+                ->with('error', 'Bạn cần đăng nhập với tài khoản nhân viên.');
         }
 
         return $next($request);

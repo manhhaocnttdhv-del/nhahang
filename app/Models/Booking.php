@@ -15,9 +15,10 @@ class Booking extends Model
         'customer_name',
         'customer_phone',
         'booking_date',
-        'booking_time',
-        'end_time',
-        'duration_minutes',
+        'session', // morning, lunch, afternoon, dinner
+        'booking_time', // Giữ lại để tương thích ngược
+        'end_time', // Giữ lại để tương thích ngược
+        'duration_minutes', // Giữ lại để tương thích ngược
         'number_of_guests',
         'location_preference',
         'notes',
@@ -51,5 +52,10 @@ class Booking extends Model
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function order()
+    {
+        return $this->hasOne(Order::class);
     }
 }

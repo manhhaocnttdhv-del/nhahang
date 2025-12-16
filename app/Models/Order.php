@@ -19,6 +19,7 @@ class Order extends Model
         'customer_address',
         'order_type',
         'status',
+        'ingredients_deducted',
         'subtotal',
         'discount_amount',
         'tax_amount',
@@ -28,6 +29,7 @@ class Order extends Model
     ];
 
     protected $casts = [
+        'ingredients_deducted' => 'boolean',
         'subtotal' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'tax_amount' => 'decimal:2',

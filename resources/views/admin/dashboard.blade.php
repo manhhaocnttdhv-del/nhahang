@@ -43,6 +43,38 @@
         </div>
     </div>
 
+    <!-- Cảnh báo nguyên liệu sắp hết -->
+    @if(isset($lowStockIngredients) && $lowStockIngredients->count() > 0)
+        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+            <h5 class="alert-heading">
+                <i class="bi bi-exclamation-triangle-fill"></i> Cảnh Báo: Nguyên Liệu Sắp Hết
+            </h5>
+            <p class="mb-2">Có <strong>{{ $lowStockIngredients->count() }}</strong> nguyên liệu đang ở mức tồn kho thấp:</p>
+            <div class="row">
+                @foreach($lowStockIngredients as $ingredient)
+                    <div class="col-md-6 mb-2">
+                        <a href="{{ route('admin.ingredients.show', $ingredient->id) }}" class="text-danger text-decoration-none">
+                            <i class="bi bi-arrow-right-circle"></i> 
+                            <strong>{{ $ingredient->name }}</strong> - 
+                            Tồn kho: {{ number_format($ingredient->getCurrentStock(), 2) }} {{ $ingredient->unit }} 
+                            (Tối thiểu: {{ $ingredient->min_stock }} {{ $ingredient->unit }})
+                        </a>
+                    </div>
+                @endforeach
+            </div>
+            <hr>
+            <div class="mb-0">
+                <a href="{{ route('admin.ingredients.index') }}" class="btn btn-danger btn-sm">
+                    <i class="bi bi-box-seam"></i> Xem Tất Cả Nguyên Liệu
+                </a>
+                <a href="{{ route('admin.ingredient-stocks.create') }}" class="btn btn-success btn-sm">
+                    <i class="bi bi-box-arrow-in-down"></i> Nhập Nguyên Liệu
+                </a>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
     <div class="row">
         <div class="col-md-6">
             <div class="card">

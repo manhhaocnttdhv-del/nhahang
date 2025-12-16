@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreBookingRequest;
 use App\Models\Booking;
 use App\Models\Table;
+use App\Helpers\SessionHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -46,10 +47,11 @@ class BookingController extends Controller
                     'booking_date' => $booking->booking_date instanceof \Carbon\Carbon 
                         ? $booking->booking_date->format('Y-m-d') 
                         : $booking->booking_date,
-                    'booking_time' => $booking->booking_time,
-                    'end_time' => $booking->end_time,
+                    'session' => $booking->session, // Thêm session
+                    'booking_time' => $booking->booking_time, // Giữ lại để tương thích
+                    'end_time' => $booking->end_time, // Giữ lại để tương thích
                     'status' => $booking->status,
-                    'table_id' => $booking->table_id, // Thêm table_id trực tiếp
+                    'table_id' => $booking->table_id,
                     'table' => $booking->table ? [
                         'id' => $booking->table->id,
                         'name' => $booking->table->name,
@@ -67,109 +69,122 @@ class BookingController extends Controller
             return back()->withErrors(['number_of_guests' => 'Số lượng khách phải từ 1 đến 50 người']);
         }
 
-        // Validate booking date and time
-        try {
-            $bookingDateTime = \Carbon\Carbon::parse($request->booking_date . ' ' . $request->booking_time);
-            $endDateTime = \Carbon\Carbon::parse($request->booking_date . ' ' . $request->end_time);
-        } catch (\Exception $e) {
-            return back()->withErrors(['booking_time' => 'Thời gian không hợp lệ'])->withInput();
-        }
-        
-        // Kiểm tra end_time phải sau start_time
-        if ($endDateTime->lte($bookingDateTime)) {
-            return back()->withErrors(['end_time' => 'Thời gian kết thúc phải sau thời gian bắt đầu'])->withInput();
-        }
-        
-        if ($bookingDateTime->isPast()) {
+        // Validate booking date
+        $bookingDate = \Carbon\Carbon::parse($request->booking_date);
+        if ($bookingDate->isPast() && !$bookingDate->isToday()) {
             return back()->withErrors(['booking_date' => 'Không thể đặt bàn trong quá khứ'])->withInput();
         }
 
-        // Validate duration (minimum 30 minutes, maximum 4 hours)
-        $durationMinutes = $bookingDateTime->diffInMinutes($endDateTime);
-        if ($durationMinutes < 30) {
-            return back()->withErrors(['end_time' => 'Thời gian đặt bàn tối thiểu là 30 phút'])->withInput();
-        }
-        if ($durationMinutes > 240) {
-            return back()->withErrors(['end_time' => 'Thời gian đặt bàn tối đa là 4 giờ'])->withInput();
-        }
+        // Lấy thời gian từ session
+        $sessionTimeRange = SessionHelper::getSessionTimeRange($request->session);
+        $bookingTime = $sessionTimeRange['start'];
+        $endTime = $sessionTimeRange['end'];
+        $durationMinutes = \Carbon\Carbon::parse($request->booking_date . ' ' . $bookingTime)
+            ->diffInMinutes(\Carbon\Carbon::parse($request->booking_date . ' ' . $endTime));
 
-        // Check if booking time is within business hours (8:00 - 22:00)
-        $bookingHour = $bookingDateTime->hour;
-        $endHour = $endDateTime->hour;
-        if ($bookingHour < 8 || $endHour > 22) {
-            return back()->withErrors(['booking_time' => 'Giờ đặt bàn phải từ 8:00 đến 22:00'])->withInput();
-        }
-
-        // Check time conflict with existing bookings (bao gồm cả pending)
-        // Buffer time: 15-30 phút giữa các đặt bàn để dọn dẹp và chuẩn bị
-        // Sử dụng transaction để tránh race condition khi nhiều người đặt cùng lúc
-        $bufferMinutes = 15;
-        
+        // Kiểm tra trùng buổi với bookings hiện có
         DB::beginTransaction();
         try {
-            $hasAvailableTable = $this->checkAvailableTablesForTimeSlot(
-                $request->booking_date,
-                $bookingDateTime,
-                $endDateTime,
-                $request->number_of_guests,
-                $bufferMinutes
-            );
-
-            if (!$hasAvailableTable) {
-                DB::rollBack();
-                return back()->withErrors([
-                    'booking_time' => 'Không có bàn trống trong khung giờ này. Tất cả bàn phù hợp đã được đặt (kể cả đang chờ xác nhận). Vui lòng chọn khung giờ khác hoặc đặt cách 15-30 phút so với các đặt bàn hiện có.'
-                ])->withInput();
+            $assignedTable = null;
+            // Nếu có table_id từ request (user đã chọn bàn), kiểm tra bàn đó trước
+            if ($request->has('table_id') && $request->table_id) {
+                $selectedTable = Table::where('id', $request->table_id)
+                    ->where('is_active', true)
+                    ->where('status', '!=', 'maintenance')
+                    ->first();
+                
+                if ($selectedTable) {
+                    // Kiểm tra capacity
+                    if ($selectedTable->capacity >= $request->number_of_guests) {
+                        // Kiểm tra xem bàn này có trống trong buổi này không
+                        $hasConflict = $this->checkTableSessionConflict(
+                            $selectedTable->id,
+                            $request->booking_date,
+                            $request->session
+                        );
+                        
+                        if (!$hasConflict) {
+                            $assignedTable = $selectedTable;
+                        }
+                    }
+                }
             }
-
-            // Tự động gán bàn nếu có bàn phù hợp
-            $assignedTable = $this->autoAssignTable(
-                $request->booking_date,
-                $bookingDateTime,
-                $endDateTime,
-                $request->number_of_guests,
-                $request->location_preference,
-                $bufferMinutes
-            );
-
-            // Nếu không tìm thấy bàn phù hợp → không cho đặt
+            
+            // Nếu không có bàn được chọn hoặc bàn đã chọn không khả dụng, tự động gán
             if (!$assignedTable) {
-                DB::rollBack();
-                return back()->withErrors([
-                    'booking_time' => 'Không có bàn trống trong khung giờ này. Tất cả bàn phù hợp đã được đặt (kể cả đang chờ xác nhận). Vui lòng chọn khung giờ khác hoặc đặt cách 15-30 phút so với các đặt bàn hiện có.'
-                ])->withInput();
+                // Kiểm tra xem có bàn trống trong buổi này không
+                $hasAvailableTable = $this->checkAvailableTablesForSession(
+                    $request->booking_date,
+                    $request->session,
+                    $request->number_of_guests
+                );
+
+                if (!$hasAvailableTable) {
+                    DB::rollBack();
+                    $sessionName = SessionHelper::getSessionName($request->session);
+                    return back()->withErrors([
+                        'session' => "Không có bàn trống trong buổi {$sessionName} này. Tất cả bàn phù hợp đã được đặt. Vui lòng chọn buổi khác."
+                    ])->withInput();
+                }
+
+                // Tự động gán bàn
+                $assignedTable = $this->autoAssignTableForSession(
+                    $request->booking_date,
+                    $request->session,
+                    $request->number_of_guests,
+                    $request->location_preference
+                );
+
+                if (!$assignedTable) {
+                    DB::rollBack();
+                    $sessionName = SessionHelper::getSessionName($request->session);
+                    return back()->withErrors([
+                        'session' => "Không có bàn phù hợp trong buổi {$sessionName} này. Vui lòng chọn buổi khác."
+                    ])->withInput();
+                }
             }
 
             // Tạo booking với bàn đã được gán
-            $booking = Booking::create([
+            $bookingData = [
                 'user_id' => auth()->id(),
-                'table_id' => $assignedTable->id, // Đảm bảo luôn có table_id
+                'table_id' => $assignedTable->id,
                 'customer_name' => $request->customer_name,
                 'customer_phone' => $request->customer_phone,
                 'booking_date' => $request->booking_date,
-                'booking_time' => $request->booking_time,
-                'end_time' => $request->end_time,
-                'duration_minutes' => $durationMinutes,
+                'session' => $request->session,
+                'booking_time' => $bookingTime, // Giữ lại để tương thích
+                'end_time' => $endTime, // Giữ lại để tương thích
+                'duration_minutes' => $durationMinutes, // Giữ lại để tương thích
                 'number_of_guests' => $request->number_of_guests,
                 'location_preference' => $request->location_preference,
                 'notes' => $request->notes,
-                'status' => 'confirmed', // Đã gán bàn nên confirmed
+                'status' => 'confirmed',
                 'confirmed_at' => now(),
-            ]);
-
-            // Cập nhật trạng thái bàn nếu đã gán
-            if ($assignedTable) {
-                $assignedTable->update(['status' => 'reserved']);
+            ];
+            
+            \Log::info('Creating booking', $bookingData);
+            
+            $booking = Booking::create($bookingData);
+            
+            if (!$booking) {
+                DB::rollBack();
+                return back()->withErrors(['error' => 'Không thể tạo đặt bàn. Vui lòng thử lại.'])->withInput();
             }
+            
+            \Log::info('Booking created successfully', ['booking_id' => $booking->id]);
+
+            // Cập nhật trạng thái bàn
+            $assignedTable->update(['status' => 'reserved']);
 
             // Create notification for each staff member
             $staffMembers = \App\Models\User::whereIn('role', ['admin', 'staff', 'cashier', 'kitchen_manager'])->get();
+            $sessionName = SessionHelper::getSessionName($request->session);
             foreach ($staffMembers as $staff) {
                 \App\Models\Notification::create([
                     'user_id' => $staff->id,
                     'type' => 'new_booking',
                     'title' => 'Đặt bàn mới',
-                    'message' => "Có đặt bàn mới từ {$request->customer_name} vào {$request->booking_date} lúc {$request->booking_time}",
+                    'message' => "Có đặt bàn mới từ {$request->customer_name} vào {$request->booking_date} buổi {$sessionName}",
                     'notifiable_type' => Booking::class,
                     'notifiable_id' => $booking->id,
                 ]);
@@ -179,7 +194,12 @@ class BookingController extends Controller
             return redirect()->route('bookings.success', $booking->id);
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Có lỗi xảy ra khi đặt bàn. Vui lòng thử lại.'])->withInput();
+            \Log::error('Error creating booking', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+            return back()->withErrors(['error' => 'Có lỗi xảy ra khi đặt bàn: ' . $e->getMessage()])->withInput();
         }
     }
     
@@ -479,6 +499,133 @@ class BookingController extends Controller
         }
 
         // Không tìm thấy bàn phù hợp
+        return null;
+    }
+
+    /**
+     * Kiểm tra xem có bàn nào còn trống trong buổi đã chọn không
+     * 
+     * @param string $bookingDate
+     * @param string $session morning, lunch, afternoon, dinner
+     * @param int $numberOfGuests
+     * @return bool
+     */
+    private function checkAvailableTablesForSession($bookingDate, $session, $numberOfGuests)
+    {
+        // Tìm tất cả các bàn phù hợp
+        $suitableTables = Table::where('is_active', true)
+            ->where('status', '!=', 'maintenance')
+            ->where('capacity', '>=', $numberOfGuests)
+            ->lockForUpdate()
+            ->get();
+
+        if ($suitableTables->isEmpty()) {
+            return false;
+        }
+
+        // Kiểm tra từng bàn xem có booking nào trùng buổi không
+        foreach ($suitableTables as $table) {
+            $hasConflict = $this->checkTableSessionConflict(
+                $table->id,
+                $bookingDate,
+                $session
+            );
+
+            if (!$hasConflict) {
+                return true; // Có ít nhất 1 bàn trống
+            }
+        }
+
+        return false; // Tất cả bàn đều bị chiếm
+    }
+
+    /**
+     * Kiểm tra xung đột buổi cho một bàn cụ thể
+     * 
+     * @param int $tableId
+     * @param string $bookingDate
+     * @param string $session
+     * @return bool true nếu có xung đột, false nếu không
+     */
+    private function checkTableSessionConflict($tableId, $bookingDate, $session)
+    {
+        // Tìm các booking đã có trên bàn này trong cùng ngày và cùng buổi
+        $existingBooking = Booking::where('table_id', $tableId)
+            ->whereDate('booking_date', $bookingDate)
+            ->where('session', $session)
+            ->whereIn('status', ['pending', 'confirmed', 'checked_in'])
+            ->first();
+
+        // Nếu có booking trùng buổi → có xung đột
+        return $existingBooking !== null;
+    }
+
+    /**
+     * Tự động gán bàn phù hợp cho booking theo buổi
+     * 
+     * @param string $bookingDate
+     * @param string $session
+     * @param int $numberOfGuests
+     * @param string|null $locationPreference
+     * @return Table|null
+     */
+    private function autoAssignTableForSession($bookingDate, $session, $numberOfGuests, $locationPreference = null)
+    {
+        // Tìm bàn phù hợp
+        $query = Table::where('is_active', true)
+            ->where('status', '!=', 'maintenance')
+            ->where('capacity', '>=', $numberOfGuests);
+
+        // Ưu tiên location preference nếu có
+        $preferredTables = collect();
+        if ($locationPreference) {
+            $preferredQuery = clone $query;
+            if (str_contains($locationPreference, 'Tầng 1')) {
+                $preferredQuery->where('area', 'Tầng 1');
+            } elseif (str_contains($locationPreference, 'Tầng 2')) {
+                $preferredQuery->where('area', 'Tầng 2');
+            } elseif (str_contains($locationPreference, 'Phòng riêng') || str_contains($locationPreference, 'VIP')) {
+                $preferredQuery->where('area', 'like', '%VIP%');
+            } elseif (str_contains($locationPreference, 'cửa sổ') || str_contains($locationPreference, 'Gần cửa sổ')) {
+                $preferredQuery->where('area', 'like', '%cửa sổ%');
+            }
+            $preferredTables = $preferredQuery->orderBy('capacity', 'asc')
+                ->orderBy('name', 'asc')
+                ->get();
+        }
+
+        // Kiểm tra preferred tables trước
+        if ($preferredTables->isNotEmpty()) {
+            foreach ($preferredTables as $table) {
+                $hasConflict = $this->checkTableSessionConflict(
+                    $table->id,
+                    $bookingDate,
+                    $session
+                );
+
+                if (!$hasConflict) {
+                    return $table;
+                }
+            }
+        }
+
+        // Nếu không tìm thấy, tìm tất cả bàn phù hợp
+        $allTables = $query->orderBy('capacity', 'asc')
+            ->orderBy('name', 'asc')
+            ->get();
+
+        foreach ($allTables as $table) {
+            $hasConflict = $this->checkTableSessionConflict(
+                $table->id,
+                $bookingDate,
+                $session
+            );
+
+            if (!$hasConflict) {
+                return $table;
+            }
+        }
+
         return null;
     }
 }

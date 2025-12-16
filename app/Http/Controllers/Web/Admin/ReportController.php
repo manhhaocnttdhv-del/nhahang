@@ -109,28 +109,30 @@ class ReportController extends Controller
             ->groupBy('order_type')
             ->get();
 
-        // Thống kê bàn
-        $tableStats = \App\Models\Table::select('tables.name', DB::raw('COUNT(orders.id) as order_count'), DB::raw('SUM(orders.total_amount) as revenue'))
-            ->leftJoin('orders', function($join) use ($period) {
-                $join->on('tables.id', '=', 'orders.table_id')
-                     ->whereHas('payments', function($q) use ($period) {
-                         $q->where('status', 'completed');
-                         switch ($period) {
-                             case 'today':
-                                 $q->whereDate('orders.created_at', today());
-                                 break;
-                             case 'week':
-                                 $q->whereBetween('orders.created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-                                 break;
-                             case 'month':
-                                 $q->whereMonth('orders.created_at', now()->month)->whereYear('orders.created_at', now()->year);
-                                 break;
-                             case 'year':
-                                 $q->whereYear('orders.created_at', now()->year);
-                                 break;
-                         }
-                     });
+        // Thống kê bàn - Chỉ tính các order đã thanh toán
+        $tableStats = \App\Models\Table::select('tables.name', DB::raw('COUNT(DISTINCT orders.id) as order_count'), DB::raw('COALESCE(SUM(orders.total_amount), 0) as revenue'))
+            ->leftJoin('orders', 'tables.id', '=', 'orders.table_id')
+            ->leftJoin('payments', function($join) {
+                $join->on('orders.id', '=', 'payments.order_id')
+                     ->where('payments.status', '=', 'completed');
             })
+            ->where(function($q) use ($period) {
+                switch ($period) {
+                    case 'today':
+                        $q->whereDate('orders.created_at', today());
+                        break;
+                    case 'week':
+                        $q->whereBetween('orders.created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                        break;
+                    case 'month':
+                        $q->whereMonth('orders.created_at', now()->month)->whereYear('orders.created_at', now()->year);
+                        break;
+                    case 'year':
+                        $q->whereYear('orders.created_at', now()->year);
+                        break;
+                }
+            })
+            ->whereNotNull('payments.id') // Chỉ lấy orders đã có payment completed
             ->groupBy('tables.id', 'tables.name')
             ->orderBy('revenue', 'desc')
             ->get();

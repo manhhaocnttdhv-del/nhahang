@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\Ingredient;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
@@ -55,6 +56,17 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
+        // Lấy danh sách nguyên liệu sắp hết (tồn kho <= min_stock)
+        $lowStockIngredients = Ingredient::where('status', 'active')
+            ->get()
+            ->filter(function($ingredient) {
+                return $ingredient->isLowStock();
+            })
+            ->sortBy(function($ingredient) {
+                return $ingredient->getCurrentStock();
+            })
+            ->take(10);
+
         return view('admin.dashboard', compact(
             'todayRevenue',
             'todayOrders',
@@ -64,7 +76,8 @@ class DashboardController extends Controller
             'monthOrders',
             'avgOrderValue',
             'monthBookings',
-            'popularItems'
+            'popularItems',
+            'lowStockIngredients'
         ));
     }
 }

@@ -87,9 +87,22 @@
                                     <div class="flex-grow-1">
                                         <strong>{{ $booking->customer_name }}</strong>
                                         <div class="small text-muted">
-                                            {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}
-                                            @if($booking->end_time)
-                                                - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                                            @if($booking->session)
+                                                @php
+                                                    $sessionNames = [
+                                                        'morning' => 'Sáng',
+                                                        'lunch' => 'Trưa',
+                                                        'afternoon' => 'Chiều',
+                                                        'dinner' => 'Tối'
+                                                    ];
+                                                    $sessionName = $sessionNames[$booking->session] ?? $booking->session;
+                                                @endphp
+                                                <i class="bi bi-calendar-event"></i> Buổi {{ $sessionName }}
+                                            @else
+                                                {{ \Carbon\Carbon::parse($booking->booking_time)->format('H:i') }}
+                                                @if($booking->end_time)
+                                                    - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                                                @endif
                                             @endif
                                             • {{ $booking->number_of_guests }} người
                                             @if($booking->table)
@@ -121,6 +134,12 @@
                     </h4>
                 </div>
                 <div class="card-body p-4">
+                    <form action="{{ route('bookings.store') }}" method="POST" id="bookingForm">
+                        @csrf
+                        
+                        <input type="hidden" id="table_id" name="table_id">
+                        <input type="hidden" id="location_preference" name="location_preference" value="{{ old('location_preference') }}">
+                        
                         <div class="mb-3">
                             <label for="customer_name" class="form-label fw-bold">
                                 <i class="bi bi-person me-2"></i>Họ và tên <span class="text-danger">*</span>
@@ -146,6 +165,93 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="booking_date" class="form-label fw-bold">
+                                <i class="bi bi-calendar me-2"></i>Ngày <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control @error('booking_date') is-invalid @enderror" 
+                                   id="booking_date" name="booking_date" 
+                                   value="{{ old('booking_date', date('Y-m-d')) }}" 
+                                   min="{{ date('Y-m-d') }}" required>
+                            @error('booking_date')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Chọn buổi đặt bàn -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold mb-3">
+                                <i class="bi bi-calendar-event me-2"></i>Buổi <span class="text-danger">*</span>
+                            </label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <input type="radio" name="session" id="session_morning" value="morning" class="btn-check" 
+                                           {{ old('session') == 'morning' ? 'checked' : '' }} required>
+                                    <label class="btn btn-outline-primary w-100 session-btn" for="session_morning" style="height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                                        <i class="bi bi-sunrise fs-4"></i>
+                                        <strong>Sáng</strong>
+                                        <small>8:00 - 11:00</small>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="radio" name="session" id="session_lunch" value="lunch" class="btn-check"
+                                           {{ old('session') == 'lunch' ? 'checked' : '' }} required>
+                                    <label class="btn btn-outline-primary w-100 session-btn" for="session_lunch" style="height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                                        <i class="bi bi-sun fs-4"></i>
+                                        <strong>Trưa</strong>
+                                        <small>11:00 - 14:00</small>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="radio" name="session" id="session_afternoon" value="afternoon" class="btn-check"
+                                           {{ old('session') == 'afternoon' ? 'checked' : '' }} required>
+                                    <label class="btn btn-outline-primary w-100 session-btn" for="session_afternoon" style="height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                                        <i class="bi bi-cloud-sun fs-4"></i>
+                                        <strong>Chiều</strong>
+                                        <small>14:00 - 17:00</small>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="radio" name="session" id="session_dinner" value="dinner" class="btn-check"
+                                           {{ old('session', 'dinner') == 'dinner' ? 'checked' : '' }} required>
+                                    <label class="btn btn-outline-primary w-100 session-btn" for="session_dinner" style="height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                                        <i class="bi bi-moon fs-4"></i>
+                                        <strong>Tối</strong>
+                                        <small>17:00 - 22:00</small>
+                                    </label>
+                                </div>
+                            </div>
+                            @error('session')
+                                <div class="text-danger small mt-2">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Hiển thị các buổi đã đặt của bàn này -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold mb-2">
+                                <i class="bi bi-calendar-check me-2"></i>Buổi đã đặt của bàn này (<span id="tableBookingsDate">{{ date('d/m/Y') }}</span>)
+                            </label>
+                            <div id="tableBookingsList" class="card" style="background: #f8f9fa;">
+                                <div class="card-body p-3">
+                                    <div id="tableBookingsContent" class="small">
+                                        <div class="text-center text-muted">
+                                            <i class="bi bi-hourglass-split"></i> Chọn bàn và buổi để xem thông tin đặt bàn
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3" id="selectedTableInfo" style="display: none;">
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Bàn đã chọn:</strong> <span id="selectedTableName"></span> 
+                                (Sức chứa: <span id="selectedTableCapacity"></span> người)
+                                <br>
+                                <small><i class="bi bi-geo-alt me-1"></i>Vị trí: <span id="selectedTableLocation"></span></small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="number_of_guests" class="form-label fw-bold">
                                 <i class="bi bi-people me-2"></i>Số lượng khách <span class="text-danger">*</span>
                             </label>
@@ -156,16 +262,6 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="text-muted" id="capacityHint"></small>
-                        </div>
-                        
-                        <div class="mb-3" id="selectedTableInfo" style="display: none;">
-                            <div class="alert alert-info mb-0">
-                                <i class="bi bi-info-circle me-2"></i>
-                                <strong>Bàn đã chọn:</strong> <span id="selectedTableName"></span> 
-                                (Sức chứa: <span id="selectedTableCapacity"></span> người)
-                                <br>
-                                <small><i class="bi bi-geo-alt me-1"></i>Vị trí: <span id="selectedTableLocation"></span></small>
-                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -180,26 +276,21 @@
                             @enderror
                         </div>
 
-                    <!-- Hiển thị thông tin xung đột khi chọn ngày/giờ -->
-                    <div id="conflictInfo" class="mb-3" style="display: none;">
-                        <div class="alert alert-warning mb-0">
-                            <h6 class="mb-2"><i class="bi bi-exclamation-triangle me-2"></i>Thông tin đặt bàn:</h6>
-                            <div id="conflictInfoContent" class="small">
-                                <!-- Sẽ được điền bởi JavaScript -->
-                            </div>
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Hướng dẫn:</strong> Click vào bàn để chọn bàn, sau đó chọn ngày và buổi đặt bàn.
                         </div>
-                    </div>
-                    
-                    <div class="alert alert-info mb-0">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <strong>Hướng dẫn:</strong> Click vào bàn để chọn ngày và giờ đặt bàn.
-                    </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBookingBtn">
+                            <i class="bi bi-check-circle me-2"></i> Đặt Bàn Ngay
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
 
         <!-- Booking Modal -->
-        <div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
+        <div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="false">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
@@ -213,6 +304,7 @@
                             @csrf
                             
                             <input type="hidden" id="selected_table_id" name="selected_table_id">
+                            <input type="hidden" id="modal_table_id" name="table_id">
                             <input type="hidden" id="location_preference" name="location_preference" value="{{ old('location_preference') }}">
                             
                             <div class="mb-3">
@@ -252,84 +344,69 @@
                                 @enderror
                             </div>
 
-                            <!-- Hiển thị các giờ đã đặt của bàn này -->
+                            <!-- Chọn buổi đặt bàn -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold mb-3">
+                                    <i class="bi bi-calendar-event me-2"></i>Buổi <span class="text-danger">*</span>
+                                </label>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <input type="radio" name="session" id="session_morning" value="morning" class="btn-check" 
+                                               {{ old('session') == 'morning' ? 'checked' : '' }} required>
+                                        <label class="btn btn-outline-primary w-100 session-btn" for="session_morning" style="height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                                            <i class="bi bi-sunrise fs-4"></i>
+                                            <strong>Sáng</strong>
+                                            <small>8:00 - 11:00</small>
+                                        </label>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="radio" name="session" id="session_lunch" value="lunch" class="btn-check"
+                                               {{ old('session') == 'lunch' ? 'checked' : '' }} required>
+                                        <label class="btn btn-outline-primary w-100 session-btn" for="session_lunch" style="height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                                            <i class="bi bi-sun fs-4"></i>
+                                            <strong>Trưa</strong>
+                                            <small>11:00 - 14:00</small>
+                                        </label>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="radio" name="session" id="session_afternoon" value="afternoon" class="btn-check"
+                                               {{ old('session') == 'afternoon' ? 'checked' : '' }} required>
+                                        <label class="btn btn-outline-primary w-100 session-btn" for="session_afternoon" style="height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                                            <i class="bi bi-cloud-sun fs-4"></i>
+                                            <strong>Chiều</strong>
+                                            <small>14:00 - 17:00</small>
+                                        </label>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="radio" name="session" id="session_dinner" value="dinner" class="btn-check"
+                                               {{ old('session', 'dinner') == 'dinner' ? 'checked' : '' }} required>
+                                        <label class="btn btn-outline-primary w-100 session-btn" for="session_dinner" style="height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                                            <i class="bi bi-moon fs-4"></i>
+                                            <strong>Tối</strong>
+                                            <small>17:00 - 22:00</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                @error('session')
+                                    <div class="text-danger small mt-2">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <!-- Hiển thị các buổi đã đặt của bàn này -->
                             <div class="mb-4">
                                 <label class="form-label fw-bold mb-2">
-                                    <i class="bi bi-clock-history me-2"></i>Giờ đã đặt của bàn này (<span id="tableBookingsDate">{{ date('d/m/Y') }}</span>)
+                                    <i class="bi bi-calendar-check me-2"></i>Buổi đã đặt của bàn này (<span id="tableBookingsDate">{{ date('d/m/Y') }}</span>)
                                 </label>
                                 <div id="tableBookingsList" class="card" style="background: #f8f9fa;">
                                     <div class="card-body p-3">
                                         <div id="tableBookingsContent" class="small">
                                             <div class="text-center text-muted">
-                                                <i class="bi bi-hourglass-split"></i> Đang tải...
+                                                <i class="bi bi-hourglass-split"></i> Chọn buổi để xem thông tin đặt bàn
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
-                            <div class="row mb-3">
-                                <div class="col-md-4">
-                                    <label for="modal_booking_time" class="form-label fw-bold">
-                                        <i class="bi bi-clock me-2"></i>Giờ bắt đầu <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="time" class="form-control @error('booking_time') is-invalid @enderror" 
-                                           id="modal_booking_time" name="booking_time" 
-                                           value="{{ old('booking_time', '18:00') }}" 
-                                           min="08:00" max="22:00" step="1800" required>
-                                    @error('booking_time')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                    <!-- Quick select buttons -->
-                                    <div class="mt-2 d-flex flex-wrap gap-1">
-                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="08:00">8:00</button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="10:00">10:00</button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="12:00">12:00</button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="14:00">14:00</button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="16:00">16:00</button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="18:00">18:00</button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary quick-time-btn" data-time="20:00">20:00</button>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="modal_duration" class="form-label fw-bold">
-                                        <i class="bi bi-hourglass-split me-2"></i>Thời lượng <span class="text-danger">*</span>
-                                    </label>
-                                    <select class="form-select @error('duration') is-invalid @enderror" 
-                                            id="modal_duration" name="duration" required>
-                                        <option value="30" {{ old('duration', '120') == '30' ? 'selected' : '' }}>30 phút</option>
-                                        <option value="60" {{ old('duration', '120') == '60' ? 'selected' : '' }}>1 giờ</option>
-                                        <option value="90" {{ old('duration', '120') == '90' ? 'selected' : '' }}>1.5 giờ</option>
-                                        <option value="120" {{ old('duration', '120') == '120' ? 'selected' : '' }}>2 giờ</option>
-                                        <option value="150" {{ old('duration', '120') == '150' ? 'selected' : '' }}>2.5 giờ</option>
-                                        <option value="180" {{ old('duration', '120') == '180' ? 'selected' : '' }}>3 giờ</option>
-                                        <option value="210" {{ old('duration', '120') == '210' ? 'selected' : '' }}>3.5 giờ</option>
-                                        <option value="240" {{ old('duration', '120') == '240' ? 'selected' : '' }}>4 giờ</option>
-                                    </select>
-                                    @error('duration')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="modal_end_time" class="form-label fw-bold">
-                                        <i class="bi bi-clock-history me-2"></i>Giờ kết thúc <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="time" class="form-control @error('end_time') is-invalid @enderror" 
-                                           id="modal_end_time" name="end_time" 
-                                           value="{{ old('end_time', '20:00') }}" 
-                                           min="08:00" max="22:00" step="1800" required readonly>
-                                    @error('end_time')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                    <small class="text-muted">
-                                        <i class="bi bi-info-circle me-1"></i>Tự động tính
-                                    </small>
-                                </div>
-                            </div>
-                            <small class="text-muted mb-3 d-block">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Thời gian đặt bàn từ 8:00 - 22:00. Thời lượng tối thiểu 30 phút, tối đa 4 giờ. Hệ thống sẽ tự động kiểm tra xung đột thời gian.
-                            </small>
 
                             <div class="mb-3">
                                 <label for="modal_number_of_guests" class="form-label fw-bold">
@@ -354,6 +431,10 @@
                                 @error('notes')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
+                            </div>
+                            
+                            <!-- Hidden field for table_id -->
+                            <input type="hidden" name="table_id" id="modal_table_id">
                         </div>
                     </form>
                     </div>
@@ -548,57 +629,67 @@
             return hours * 60 + minutes;
         }
 
-        // Load và hiển thị các booking của bàn đã chọn
+        // Load và hiển thị các booking của bàn đã chọn theo session
         function loadTableBookings() {
-            const tableId = $('#selected_table_id').val();
-            const bookingDate = $('#modal_booking_date').val() || '{{ date('Y-m-d') }}';
-            
-            console.log('loadTableBookings - tableId:', tableId, 'bookingDate:', bookingDate); // Debug
+            const tableId = $('#table_id').val();
+            const bookingDate = $('#booking_date').val() || '{{ date('Y-m-d') }}';
+            const selectedSession = $('input[name="session"]:checked').val();
             
             if (!tableId) {
                 $('#tableBookingsContent').html('<div class="text-center text-muted"><i class="bi bi-info-circle"></i> Chưa chọn bàn</div>');
                 return;
             }
             
+            // Update date label
+            if (bookingDate) {
+                const dateObj = new Date(bookingDate);
+                const formattedDate = String(dateObj.getDate()).padStart(2, '0') + '/' + 
+                                     String(dateObj.getMonth() + 1).padStart(2, '0') + '/' + 
+                                     dateObj.getFullYear();
+                $('#tableBookingsDate').text(formattedDate);
+            }
+            
             const bookings = window.currentBookings || [];
-            console.log('Total bookings:', bookings.length); // Debug
             
             // Normalize date format for comparison
             const normalizeDate = function(dateStr) {
                 if (!dateStr) return '';
-                // Convert to YYYY-MM-DD format
                 if (dateStr.includes('T')) {
                     return dateStr.split('T')[0];
                 }
                 return dateStr;
             };
             
+            // Session names mapping
+            const sessionNames = {
+                'morning': 'Sáng',
+                'lunch': 'Trưa',
+                'afternoon': 'Chiều',
+                'dinner': 'Tối'
+            };
+            
+            // Filter bookings by date, table, and session
             const tableBookings = bookings.filter(function(booking) {
                 const bookingDateNormalized = normalizeDate(booking.booking_date);
                 const selectedDateNormalized = normalizeDate(bookingDate);
-                
                 const matchesDate = bookingDateNormalized === selectedDateNormalized;
-                // Check table_id from multiple sources
+                
                 const bookingTableId = booking.table_id || (booking.table ? booking.table.id : null);
                 const matchesTable = bookingTableId && bookingTableId == tableId;
                 
-                console.log('Booking check:', {
-                    booking_id: booking.id,
-                    booking_date: bookingDateNormalized,
-                    selected_date: selectedDateNormalized,
-                    matches_date: matchesDate,
-                    booking_table_id: bookingTableId,
-                    selected_table_id: tableId,
-                    matches_table: matchesTable
-                }); // Debug
+                // If session is selected, filter by session too
+                const matchesSession = !selectedSession || booking.session === selectedSession;
                 
-                return matchesDate && matchesTable;
+                return matchesDate && matchesTable && matchesSession;
             });
             
-            console.log('Table bookings found:', tableBookings.length); // Debug
-            
             if (tableBookings.length === 0) {
-                $('#tableBookingsContent').html('<div class="text-center text-success"><i class="bi bi-check-circle"></i> Bàn này chưa có đặt bàn nào trong ngày này</div>');
+                if (selectedSession) {
+                    const sessionName = sessionNames[selectedSession] || selectedSession;
+                    $('#tableBookingsContent').html(`<div class="text-center text-success"><i class="bi bi-check-circle"></i> Bàn này chưa có đặt bàn nào trong buổi ${sessionName} này</div>`);
+                } else {
+                    $('#tableBookingsContent').html('<div class="text-center text-muted"><i class="bi bi-info-circle"></i> Chọn buổi để xem thông tin đặt bàn</div>');
+                }
             } else {
                 let html = '<div class="list-group list-group-flush">';
                 tableBookings.forEach(function(booking) {
@@ -608,14 +699,13 @@
                         ? '<span class="badge bg-success">Đã xác nhận</span>'
                         : '<span class="badge bg-info">Đã đến</span>';
                     
-                    const timeRange = booking.booking_time.substring(0, 5) + 
-                                    (booking.end_time ? ' - ' + booking.end_time.substring(0, 5) : '');
+                    const sessionName = sessionNames[booking.session] || booking.session || 'N/A';
                     
                     html += `<div class="list-group-item d-flex justify-content-between align-items-center">
                         <div>
                             <strong>${booking.customer_name}</strong><br>
                             <small class="text-muted">
-                                <i class="bi bi-clock"></i> ${timeRange}
+                                <i class="bi bi-calendar-event"></i> Buổi ${sessionName}
                             </small>
                         </div>
                         ${statusBadge}
@@ -626,126 +716,24 @@
             }
         }
 
-        // Tự động tính end_time dựa trên booking_time và duration (for modal)
-        function calculateEndTimeModal() {
-            const bookingTime = $('#modal_booking_time').val();
-            const duration = parseInt($('#modal_duration').val()) || 120; // Mặc định 2 giờ
-            
-            if (!bookingTime) {
-                return;
-            }
-            
-            // Chuyển đổi booking_time sang phút
-            const [hours, minutes] = bookingTime.split(':').map(Number);
-            const startMinutes = hours * 60 + minutes;
-            
-            // Tính end_time
-            const endMinutes = startMinutes + duration;
-            const endHours = Math.floor(endMinutes / 60);
-            const endMins = endMinutes % 60;
-            
-            // Đảm bảo không vượt quá 22:00
-            if (endHours > 22 || (endHours === 22 && endMins > 0)) {
-                // Nếu vượt quá 22:00, đặt về 22:00 và điều chỉnh duration
-                $('#modal_end_time').val('22:00');
-                // Có thể hiển thị cảnh báo
-                const maxEndMinutes = 22 * 60;
-                const adjustedDuration = maxEndMinutes - startMinutes;
-                if (adjustedDuration >= 30) {
-                    $('#modal_duration').val(adjustedDuration);
-                }
-            } else {
-                // Format lại thành HH:MM
-                const endTimeStr = String(endHours).padStart(2, '0') + ':' + String(endMins).padStart(2, '0');
-                $('#modal_end_time').val(endTimeStr);
-            }
-            
-            // Load table bookings when time changes
+        // Check session conflict when session or date changes
+        $('input[name="session"]').on('change', function() {
             loadTableBookings();
-        }
-        
-        // Tự động tính end_time khi booking_time hoặc duration thay đổi (in modal)
-        $('#modal_booking_time, #modal_duration').on('change', function() {
-            calculateEndTimeModal();
+            checkSessionConflicts();
         });
         
-        // Quick time select buttons (in modal)
-        $(document).on('click', '.quick-time-btn', function() {
-            const time = $(this).data('time');
-            $('#modal_booking_time').val(time);
-            calculateEndTimeModal();
-            $(this).addClass('active').siblings().removeClass('active');
+        $('#booking_date').on('change', function() {
+            const selectedDate = $(this).val();
+            if (selectedDate) {
+                loadBookingsForDate(selectedDate);
+                setTimeout(function() {
+                    loadTableBookings();
+                    checkSessionConflicts();
+                }, 200);
+            }
         });
         
-        // Hiển thị các booking đã đặt trong khung giờ được chọn
-        function checkTimeSlotBookings() {
-            const bookingDate = $('#booking_date').val();
-            const bookingTime = $('#booking_time').val();
-            const endTime = $('#end_time').val();
-            
-            if (!bookingDate || !bookingTime || !endTime) {
-                $('#timeSlotBookings').hide();
-                return;
-            }
-
-            // Lấy danh sách booking từ server (đã có trong selectedDateBookings)
-            const bookings = @json($selectedDateBookings ?? []);
-            const bufferMinutes = 15; // Buffer 15 phút
-            
-            // Chuyển đổi thời gian sang phút để so sánh
-            function timeToMinutes(timeStr) {
-                const [hours, minutes] = timeStr.split(':').map(Number);
-                return hours * 60 + minutes;
-            }
-            
-            const selectedStart = timeToMinutes(bookingTime);
-            const selectedEnd = timeToMinutes(endTime);
-            
-            // Tìm các booking xung đột
-            const conflictingBookings = [];
-            bookings.forEach(function(booking) {
-                if (booking.booking_date !== bookingDate) return;
-                
-                const bookingStart = timeToMinutes(booking.booking_time.substring(0, 5));
-                const bookingEnd = booking.end_time ? timeToMinutes(booking.end_time.substring(0, 5)) : bookingStart + 120;
-                const bookingEndWithBuffer = bookingEnd + bufferMinutes;
-                
-                // Kiểm tra xung đột: selectedStart < bookingEndWithBuffer && bookingStart < selectedEnd
-                if (selectedStart < bookingEndWithBuffer && bookingStart < selectedEnd) {
-                    conflictingBookings.push(booking);
-                }
-            });
-
-            // Hiển thị kết quả
-            if (conflictingBookings.length > 0) {
-                let html = '<ul class="mb-0 ps-3">';
-                conflictingBookings.forEach(function(booking) {
-                    const statusBadge = booking.status === 'pending' 
-                        ? '<span class="badge bg-warning ms-2">Chờ xác nhận</span>'
-                        : booking.status === 'confirmed'
-                        ? '<span class="badge bg-success ms-2">Đã xác nhận</span>'
-                        : '<span class="badge bg-info ms-2">Đã đến</span>';
-                    
-                    const tableInfo = booking.table 
-                        ? ` - Bàn ${booking.table.name}`
-                        : ' - Chưa gán bàn';
-                    
-                    html += `<li class="mb-1">
-                        <strong>${booking.customer_name}</strong> 
-                        (${booking.booking_time.substring(0, 5)}${booking.end_time ? ' - ' + booking.end_time.substring(0, 5) : ''})
-                        ${tableInfo}
-                        ${statusBadge}
-                    </li>`;
-                });
-                html += '</ul>';
-                $('#conflictingBookingsList').html(html);
-                $('#timeSlotBookings').show();
-            } else {
-                $('#timeSlotBookings').hide();
-            }
-        }
-
-        // Removed old booking_time/booking_date handlers (now in modal)
+        // Removed old time-based functions (now using session)
 
         // Table selection - Fill form and open modal (use event delegation)
         // Try both selectors to ensure it works
@@ -805,185 +793,61 @@
             $('.table-card').removeClass('selected');
             $card.addClass('selected');
             
-            // Fill modal
-            $('#modalTableName').text(tableName);
-            $('#selected_table_id').val(tableId);
-            $('#modal_number_of_guests').val(capacity);
+            // Fill form fields
+            $('#table_id').val(tableId);
+            $('#location_preference').val(locationValue || area || '');
             
             // Show warning if table is reserved/occupied
             if ($card.hasClass('table-reserved') || $card.hasClass('table-occupied')) {
-                $('#modalCapacityHint').html(`<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Bàn này đã có đặt bàn. Bạn vẫn có thể đặt khung giờ khác.</span>`);
+                $('#capacityHint').html(`<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Bàn này đã có đặt bàn. Bạn vẫn có thể đặt khung giờ khác.</span>`);
             } else {
-                $('#modalCapacityHint').text(`Gợi ý: Bàn này có thể chứa tối đa ${capacity} người`);
+                $('#capacityHint').text(`Gợi ý: Bàn này có thể chứa tối đa ${capacity} người`);
             }
             
-            $('#location_preference').val(locationValue);
+            // Load bookings for selected date
+            const selectedDate = $('#booking_date').val() || new Date().toISOString().split('T')[0];
+            loadBookingsForDate(selectedDate);
             
-            // Copy data from right form to modal
-            $('#modal_customer_name').val($('#customer_name').val());
-            $('#modal_customer_phone').val($('#customer_phone').val());
-            $('#modal_notes').val($('#notes').val());
-            
-            // Reset date/time
-            const today = new Date().toISOString().split('T')[0];
-            $('#modal_booking_date').val(today);
-            $('#modal_booking_time').val('18:00');
-            $('#modal_duration').val('120');
-            calculateEndTimeModal();
-            
-            // Load bookings for today
-            loadBookingsForDate(today);
-            
-            // Reset button state when opening modal
-            $('#submitBookingBtn').prop('disabled', false)
-                .removeClass('btn-secondary')
-                .addClass('btn-primary')
-                .html('<i class="bi bi-check-circle me-2"></i> Đặt Bàn Ngay');
-            
-            // Open modal using Bootstrap 5
-            try {
-                const modalElement = document.getElementById('bookingModal');
-                if (modalElement) {
-                    // Wait a bit to ensure DOM is ready
-                    setTimeout(function() {
-                        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-                            const bookingModal = new bootstrap.Modal(modalElement);
-                            bookingModal.show();
-                            console.log('Modal opened with Bootstrap'); // Debug
-                        } else {
-                            // Fallback: use jQuery if Bootstrap not available
-                            $('#bookingModal').modal('show');
-                            console.log('Modal opened with jQuery'); // Debug
-                        }
-                    }, 100);
-                } else {
-                    console.error('Modal element not found'); // Debug
-                    alert('Không tìm thấy modal. Vui lòng tải lại trang.');
-                }
-            } catch (error) {
-                console.error('Error opening modal:', error); // Debug
-                // Fallback: try jQuery
-                $('#bookingModal').modal('show');
-            }
+            // Scroll to form
+            $('html, body').animate({
+                scrollTop: $('#bookingForm').offset().top - 100
+            }, 500);
         });
         
-        // Load bookings when date changes in modal
-        $('#modal_booking_date').on('change', function() {
-            const selectedDate = $(this).val();
-            if (selectedDate) {
-                loadBookingsForDate(selectedDate);
-                // Update date label
-                const dateObj = new Date(selectedDate);
-                const formattedDate = String(dateObj.getDate()).padStart(2, '0') + '/' + 
-                                     String(dateObj.getMonth() + 1).padStart(2, '0') + '/' + 
-                                     dateObj.getFullYear();
-                $('#tableBookingsDate').text(formattedDate);
-                // Load table bookings and check conflicts
-                setTimeout(function() {
-                    loadTableBookings();
-                    checkModalTimeConflicts();
-                }, 200);
-            }
-        });
-        
-        // Check conflicts when time changes in modal
-        $('#modal_booking_time, #modal_duration').on('change', function() {
-            calculateEndTimeModal();
-            setTimeout(checkModalTimeConflicts, 200);
-        });
-        
-        // Function to check time conflicts and display in right panel
-        function checkModalTimeConflicts() {
-            const bookingDate = $('#modal_booking_date').val();
-            const bookingTime = $('#modal_booking_time').val();
-            const endTime = $('#modal_end_time').val();
-            const selectedTableId = $('#selected_table_id').val();
+        // Function to check session conflicts
+        function checkSessionConflicts() {
+            const bookingDate = $('#booking_date').val();
+            const selectedSession = $('input[name="session"]:checked').val();
+            const selectedTableId = $('#table_id').val();
             
-            if (!bookingDate || !bookingTime || !endTime) {
-                $('#conflictInfo').hide();
+            if (!bookingDate || !selectedSession) {
                 $('#submitBookingBtn').prop('disabled', false).removeClass('btn-secondary').addClass('btn-primary');
-                return;
+                return false; // Không có conflict
             }
             
             const bookings = window.currentBookings || [];
-            const bufferMinutes = 15;
             
-            function timeToMinutes(timeStr) {
-                const [hours, minutes] = timeStr.split(':').map(Number);
-                return hours * 60 + minutes;
-            }
-            
-            const selectedStart = timeToMinutes(bookingTime);
-            const selectedEnd = timeToMinutes(endTime);
-            
-            // Find conflicting bookings for the selected table
-            const conflictingBookings = [];
-            bookings.forEach(function(booking) {
-                if (booking.booking_date !== bookingDate) return;
-                
-                // Chỉ kiểm tra conflict với bàn đã chọn
-                if (selectedTableId && booking.table && booking.table.id != selectedTableId) {
-                    return; // Skip bookings from other tables
-                }
-                
-                const bookingStart = timeToMinutes(booking.booking_time.substring(0, 5));
-                const bookingEnd = booking.end_time ? timeToMinutes(booking.end_time.substring(0, 5)) : bookingStart + 120;
-                const bookingEndWithBuffer = bookingEnd + bufferMinutes;
-                
-                // Check conflict: selectedStart < bookingEndWithBuffer && bookingStart < selectedEnd
-                if (selectedStart < bookingEndWithBuffer && bookingStart < selectedEnd) {
-                    conflictingBookings.push(booking);
-                }
+            // Find conflicting bookings (same date, same table, same session)
+            const conflictingBookings = bookings.filter(function(booking) {
+                if (booking.booking_date !== bookingDate) return false;
+                if (selectedTableId && booking.table && booking.table.id != selectedTableId) return false;
+                return booking.session === selectedSession;
             });
             
-            // Display in right panel and disable button if conflict
+            // Nếu có conflict, disable button
             if (conflictingBookings.length > 0) {
-                let html = '<strong class="text-danger">⚠️ Đã có đặt bàn trùng khung giờ:</strong><ul class="mb-0 ps-3 mt-2">';
-                conflictingBookings.forEach(function(booking) {
-                    const statusBadge = booking.status === 'pending' 
-                        ? '<span class="badge bg-warning ms-2">Chờ xác nhận</span>'
-                        : booking.status === 'confirmed'
-                        ? '<span class="badge bg-success ms-2">Đã xác nhận</span>'
-                        : '<span class="badge bg-info ms-2">Đã đến</span>';
-                    
-                    const tableInfo = booking.table 
-                        ? ` - Bàn ${booking.table.name}`
-                        : ' - Chưa gán bàn';
-                    
-                    html += `<li class="mb-1">
-                        <strong>${booking.customer_name}</strong> 
-                        (${booking.booking_time.substring(0, 5)}${booking.end_time ? ' - ' + booking.end_time.substring(0, 5) : ''})
-                        ${tableInfo}
-                        ${statusBadge}
-                    </li>`;
-                });
-                html += '</ul><small class="text-danger d-block mt-2">Vui lòng chọn khung giờ khác hoặc đặt cách 15-30 phút so với các đặt bàn hiện có.</small>';
-                $('#conflictInfoContent').html(html);
-                $('#conflictInfo').removeClass('alert-success').addClass('alert-warning').fadeIn();
-                
-                // Disable submit button
                 $('#submitBookingBtn').prop('disabled', true)
                     .removeClass('btn-primary')
                     .addClass('btn-secondary')
-                    .html('<i class="bi bi-x-circle me-2"></i> Không thể đặt (trùng khung giờ)');
+                    .html('<i class="bi bi-x-circle me-2"></i> Không thể đặt (trùng buổi)');
+                return true; // Có conflict
             } else {
-                // Show booking info
-                const dateObj = new Date(bookingDate);
-                const formattedDate = String(dateObj.getDate()).padStart(2, '0') + '/' + 
-                                     String(dateObj.getMonth() + 1).padStart(2, '0') + '/' + 
-                                     dateObj.getFullYear();
-                const html = `<strong>Thông tin đặt bàn:</strong><br>
-                    <i class="bi bi-calendar me-1"></i> Ngày: ${formattedDate}<br>
-                    <i class="bi bi-clock me-1"></i> Giờ: ${bookingTime} - ${endTime}<br>
-                    <span class="badge bg-success mt-2">✓ Khung giờ này có thể đặt</span>`;
-                $('#conflictInfoContent').html(html);
-                $('#conflictInfo').removeClass('alert-warning').addClass('alert-success').fadeIn();
-                
                 // Enable submit button
                 $('#submitBookingBtn').prop('disabled', false)
                     .removeClass('btn-secondary')
                     .addClass('btn-primary')
                     .html('<i class="bi bi-check-circle me-2"></i> Đặt Bàn Ngay');
+                return false; // Không có conflict
             }
         }
         
@@ -995,7 +859,7 @@
                 success: function(bookings) {
                     window.currentBookings = bookings;
                     loadTableBookings();
-                    checkModalTimeConflicts();
+                    checkSessionConflicts();
                 },
                 error: function() {
                     console.error('Error loading bookings');
@@ -1005,41 +869,61 @@
             });
         }
         
-        // Submit booking form - Copy data from right form to modal form before submit
-        $('#submitBookingBtn').on('click', function(e) {
-            e.preventDefault();
+        // Check session conflict when session is selected
+        $('input[name="session"]').on('change', function() {
+            checkModalSessionConflicts();
+        });
+        
+        // Handle form submit event
+        $('#bookingForm').on('submit', function(e) {
+            console.log('Form submit event triggered'); // Debug
             
             // Validate before submit
-            const startTime = $('#modal_booking_time').val();
-            const endTime = $('#modal_end_time').val();
-            const bookingDate = $('#modal_booking_date').val();
-            const guests = parseInt($('#modal_number_of_guests').val()) || 0;
-            const tableId = $('#selected_table_id').val();
+            const bookingDate = $('#booking_date').val();
+            const selectedSession = $('input[name="session"]:checked').val();
+            const guests = parseInt($('#number_of_guests').val()) || 0;
+            const tableId = $('#table_id').val();
+            const customerName = $('#customer_name').val();
+            const customerPhone = $('#customer_phone').val();
+            
+            console.log('Form data:', { bookingDate, selectedSession, guests, tableId, customerName, customerPhone }); // Debug
+            
+            if (!customerName || customerName.trim() === '') {
+                e.preventDefault();
+                alert('Vui lòng nhập họ và tên.');
+                $('#customer_name').focus();
+                return false;
+            }
+            
+            if (!customerPhone || customerPhone.trim() === '') {
+                e.preventDefault();
+                alert('Vui lòng nhập số điện thoại.');
+                $('#customer_phone').focus();
+                return false;
+            }
             
             if (!tableId) {
+                e.preventDefault();
                 alert('Vui lòng chọn bàn trước khi đặt.');
                 return false;
             }
             
             if (!bookingDate) {
+                e.preventDefault();
                 alert('Vui lòng chọn ngày đặt bàn.');
                 return false;
             }
             
-            if (!startTime || !endTime) {
-                alert('Vui lòng chọn thời gian đặt bàn.');
+            if (!selectedSession) {
+                e.preventDefault();
+                alert('Vui lòng chọn buổi đặt bàn.');
                 return false;
             }
             
-            // Validate time range
-            const [startHour, startMin] = startTime.split(':').map(Number);
-            const [endHour, endMin] = endTime.split(':').map(Number);
-            const startMinutes = startHour * 60 + startMin;
-            const endMinutes = endHour * 60 + endMin;
-            const diffMinutes = endMinutes - startMinutes;
-            
-            if (diffMinutes < 30 || diffMinutes > 240 || endMinutes <= startMinutes) {
-                alert('Vui lòng kiểm tra lại thời gian đặt bàn. Thời gian đặt bàn phải từ 30 phút đến 4 giờ.');
+            if (!guests || guests < 1) {
+                e.preventDefault();
+                alert('Vui lòng nhập số lượng khách (tối thiểu 1 người).');
+                $('#number_of_guests').focus();
                 return false;
             }
             
@@ -1048,14 +932,25 @@
             if (selectedTable.length > 0) {
                 const capacity = selectedTable.data('capacity');
                 if (guests > capacity) {
+                    e.preventDefault();
                     const tableName = selectedTable.find('h6').text();
                     alert(`Bàn ${tableName} chỉ có thể chứa tối đa ${capacity} người. Vui lòng chọn bàn khác hoặc giảm số lượng khách.`);
                     return false;
                 }
             }
             
-            // Submit form
-            $('#bookingForm').submit();
+            // Check conflict one more time
+            if (checkSessionConflicts()) {
+                e.preventDefault();
+                alert('Buổi này đã có đặt bàn. Vui lòng chọn buổi khác.');
+                return false;
+            }
+            
+            // Show loading state
+            $('#submitBookingBtn').prop('disabled', true).html('<i class="bi bi-hourglass-split me-2"></i> Đang xử lý...');
+            
+            console.log('Form validation passed, submitting...'); // Debug
+            return true; // Allow form to submit
         });
         
         // Validate capacity when guests number changes
@@ -1075,99 +970,9 @@
             }
         });
         
-        // Validate time duration in real-time
-        function validateTimeDuration() {
-            const startTime = $('#booking_time').val();
-            const endTime = $('#end_time').val();
-            const $startInput = $('#booking_time');
-            const $endInput = $('#end_time');
-            
-            // Remove previous error classes
-            $startInput.removeClass('is-invalid');
-            $endInput.removeClass('is-invalid');
-            $('.time-duration-error').remove();
-            
-            if (!startTime || !endTime) {
-                return true;
-            }
-            
-            // Parse times
-            const [startHour, startMin] = startTime.split(':').map(Number);
-            const [endHour, endMin] = endTime.split(':').map(Number);
-            
-            const startMinutes = startHour * 60 + startMin;
-            const endMinutes = endHour * 60 + endMin;
-            
-            let isValid = true;
-            let errorMessage = '';
-            let suggestion = '';
-            
-            // Check if end time is after start time
-            if (endMinutes <= startMinutes) {
-                isValid = false;
-                // Provide helpful suggestion
-                if (endHour < 12 && startHour >= 12) {
-                    // End time is AM, start time is PM - likely user meant PM for end time
-                    const suggestedEndHour = endHour + 12;
-                    suggestion = ` Gợi ý: Có thể bạn muốn chọn ${String(suggestedEndHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')} (PM)?`;
-                } else if (endHour >= 12 && startHour < 12) {
-                    // End time is PM, start time is AM - this is valid, but check duration
-                    const diffMinutes = (24 * 60 - startMinutes) + endMinutes;
-                if (diffMinutes < 30) {
-                        errorMessage = 'Thời gian đặt bàn tối thiểu là 30 phút.';
-                } else if (diffMinutes > 240) {
-                        errorMessage = 'Thời gian đặt bàn tối đa là 4 giờ.';
-                    } else {
-                        isValid = true; // Valid overnight booking (though unlikely for restaurant)
-                    }
-                } else {
-                    errorMessage = 'Thời gian kết thúc phải sau thời gian bắt đầu.';
-                }
-                
-                if (!isValid) {
-                    errorMessage += suggestion;
-                    $endInput.addClass('is-invalid');
-                }
-            } else {
-                const diffMinutes = endMinutes - startMinutes;
-                
-                // Check minimum duration (30 minutes)
-                if (diffMinutes < 30) {
-                    isValid = false;
-                    const suggestedEndMinutes = startMinutes + 30;
-                    const suggestedHour = Math.floor(suggestedEndMinutes / 60);
-                    const suggestedMin = suggestedEndMinutes % 60;
-                    errorMessage = `Thời gian đặt bàn tối thiểu là 30 phút. Gợi ý: Chọn ${String(suggestedHour).padStart(2, '0')}:${String(suggestedMin).padStart(2, '0')}?`;
-                    $endInput.addClass('is-invalid');
-                }
-                // Check maximum duration (4 hours = 240 minutes)
-                else if (diffMinutes > 240) {
-                    isValid = false;
-                    const suggestedEndMinutes = startMinutes + 240;
-                    const suggestedHour = Math.floor(suggestedEndMinutes / 60);
-                    const suggestedMin = suggestedEndMinutes % 60;
-                    errorMessage = `Thời gian đặt bàn tối đa là 4 giờ. Gợi ý: Chọn ${String(suggestedHour).padStart(2, '0')}:${String(suggestedMin).padStart(2, '0')}?`;
-                    $endInput.addClass('is-invalid');
-                }
-            }
-            
-            // Display error message
-            if (!isValid) {
-                const errorHtml = `<div class="invalid-feedback time-duration-error d-block">${errorMessage}</div>`;
-                $endInput.after(errorHtml);
-            }
-            
-            return isValid;
-        }
+        // Removed validateTimeDuration - no longer needed with session-based booking
 
-        // Validate on time change
-        $('#booking_time, #end_time').on('change blur', function() {
-            validateTimeDuration();
-            checkTimeSlotBookings();
-        });
-        
         // Form submission - validation đã được xử lý trong submitBookingBtn click handler
-        // Chỉ để form submit bình thường
     });
 </script>
 @endpush

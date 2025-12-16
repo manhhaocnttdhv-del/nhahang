@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreMenuItemRequest;
 use App\Models\Category;
+use App\Models\Ingredient;
 use App\Models\MenuItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -28,7 +29,8 @@ class MenuController extends Controller
     public function create()
     {
         $categories = Category::where('is_active', true)->get();
-        return view('admin.menu.create', compact('categories'));
+        $ingredients = Ingredient::where('status', 'active')->orderBy('name')->get();
+        return view('admin.menu.create', compact('categories', 'ingredients'));
     }
 
     public function store(StoreMenuItemRequest $request)
@@ -48,7 +50,18 @@ class MenuController extends Controller
             unset($data['image']);
         }
 
-        MenuItem::create($data);
+        $menuItem = MenuItem::create($data);
+
+        // Sync ingredients
+        if ($request->has('ingredients')) {
+            $ingredientsData = [];
+            foreach ($request->ingredients as $ingredientId => $quantity) {
+                if (!empty($quantity) && $quantity > 0) {
+                    $ingredientsData[$ingredientId] = ['quantity' => $quantity];
+                }
+            }
+            $menuItem->ingredients()->sync($ingredientsData);
+        }
 
         return redirect()->route('admin.menu.index')
             ->with('success', 'Đã thêm món ăn thành công');
@@ -56,10 +69,11 @@ class MenuController extends Controller
 
     public function edit($id)
     {
-        $menuItem = MenuItem::findOrFail($id);
+        $menuItem = MenuItem::with('ingredients')->findOrFail($id);
         $categories = Category::where('is_active', true)->get();
+        $ingredients = Ingredient::where('status', 'active')->orderBy('name')->get();
         
-        return view('admin.menu.edit', compact('menuItem', 'categories'));
+        return view('admin.menu.edit', compact('menuItem', 'categories', 'ingredients'));
     }
 
     public function update(StoreMenuItemRequest $request, $id)
@@ -87,6 +101,20 @@ class MenuController extends Controller
         }
 
         $menuItem->update($data);
+
+        // Sync ingredients
+        if ($request->has('ingredients')) {
+            $ingredientsData = [];
+            foreach ($request->ingredients as $ingredientId => $quantity) {
+                if (!empty($quantity) && $quantity > 0) {
+                    $ingredientsData[$ingredientId] = ['quantity' => $quantity];
+                }
+            }
+            $menuItem->ingredients()->sync($ingredientsData);
+        } else {
+            // Nếu không có ingredients, xóa tất cả
+            $menuItem->ingredients()->sync([]);
+        }
 
         return redirect()->route('admin.menu.index')
             ->with('success', 'Đã cập nhật món ăn thành công');

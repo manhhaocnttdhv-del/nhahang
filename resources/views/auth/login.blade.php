@@ -54,10 +54,53 @@
                         </div>
                     </form>
 
+                    @if (session('success'))
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    @endif
+
+                    @if (session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    @endif
+
+                    @if (session('info'))
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            <i class="bi bi-info-circle me-2"></i>{{ session('info') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    @endif
+
                     <div class="text-center mb-3">
                         <a href="{{ route('password.request') }}" class="text-decoration-none" style="color: var(--primary-color);">
                             <i class="bi bi-question-circle me-1"></i> Quên mật khẩu?
                         </a>
+                    </div>
+
+                    <div class="text-center mb-3">
+                        <button type="button" class="btn btn-link text-decoration-none p-0" data-bs-toggle="collapse" data-bs-target="#resendVerification" style="color: var(--primary-color);">
+                            <i class="bi bi-envelope-check me-1"></i> Chưa nhận được email xác thực?
+                        </button>
+                    </div>
+
+                    <div class="collapse" id="resendVerification">
+                        <div class="card card-body bg-light mb-3">
+                            <form action="{{ route('verification.resend') }}" method="POST">
+                                @csrf
+                                <div class="mb-3">
+                                    <label for="resend_email" class="form-label small">Email của bạn:</label>
+                                    <input type="email" class="form-control" id="resend_email" name="email" 
+                                           value="{{ old('email') }}" placeholder="Nhập email để gửi lại link xác thực" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm w-100">
+                                    <i class="bi bi-send me-1"></i> Gửi lại email xác thực
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
                     <hr class="my-4">

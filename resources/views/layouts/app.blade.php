@@ -710,8 +710,10 @@
                                 <li><a class="dropdown-item" href="{{ route('favorites.index') }}"><i class="bi bi-heart me-2"></i> Món yêu thích</a></li>
                                 <li><a class="dropdown-item" href="{{ route('addresses.index') }}"><i class="bi bi-geo-alt me-2"></i> Địa chỉ</a></li>
                                 <li><hr class="dropdown-divider"></li>
+                                @if(!Auth::user()->isStaff() && !Auth::user()->isAdmin())
                                 <li><a class="dropdown-item" href="{{ route('bookings.index') }}"><i class="bi bi-calendar-check me-2"></i> Đặt bàn</a></li>
                                 <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="bi bi-receipt me-2"></i> Đơn hàng</a></li>
+                                @endif
                                 <li><hr class="dropdown-divider"></li>
                                 @if(Auth::user()->isStaff() && !Auth::user()->isAdmin())
                                     <li><a class="dropdown-item" href="{{ route('staff.dashboard') }}">

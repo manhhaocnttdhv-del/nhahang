@@ -25,10 +25,6 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Email verification routes
-Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verify'])->name('verification.verify');
-Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail'])->name('verification.resend');
-
 // Public menu routes (no authentication required)
 Route::get('/menu', [CustomerMenuController::class, 'index']);
 Route::get('/menu/{id}', [CustomerMenuController::class, 'show']);

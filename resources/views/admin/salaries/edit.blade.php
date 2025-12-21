@@ -48,28 +48,6 @@
                             @enderror
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Ngày bắt đầu kỳ lương <span class="text-danger">*</span></label>
-                                    <input type="date" name="period_start" class="form-control @error('period_start') is-invalid @enderror" 
-                                           value="{{ old('period_start', $salary->period_start) }}" required>
-                                    @error('period_start')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Ngày kết thúc kỳ lương <span class="text-danger">*</span></label>
-                                    <input type="date" name="period_end" class="form-control @error('period_end') is-invalid @enderror" 
-                                           value="{{ old('period_end', $salary->period_end) }}" required>
-                                    @error('period_end')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
 
                         <!-- Full-time fields -->
                         <div id="full_time_fields">
@@ -123,54 +101,6 @@
                             </div>
                         </div>
 
-                        <!-- Overtime -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Giờ làm thêm</label>
-                                    <input type="number" name="overtime_hours" class="form-control @error('overtime_hours') is-invalid @enderror" 
-                                           value="{{ old('overtime_hours', $salary->overtime_hours) }}" min="0" step="0.5" id="overtime_hours">
-                                    @error('overtime_hours')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Lương làm thêm/giờ</label>
-                                    <input type="number" name="overtime_rate" class="form-control @error('overtime_rate') is-invalid @enderror" 
-                                           value="{{ old('overtime_rate', $salary->overtime_rate) }}" min="0" step="0.01" id="overtime_rate">
-                                    @error('overtime_rate')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Bonus & Deduction -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Thưởng</label>
-                                    <input type="number" name="bonus" class="form-control @error('bonus') is-invalid @enderror" 
-                                           value="{{ old('bonus', $salary->bonus) }}" min="0" step="0.01" id="bonus">
-                                    @error('bonus')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Khấu trừ</label>
-                                    <input type="number" name="deduction" class="form-control @error('deduction') is-invalid @enderror" 
-                                           value="{{ old('deduction', $salary->deduction) }}" min="0" step="0.01" id="deduction">
-                                    @error('deduction')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Total Salary (Auto-calculated) -->
                         <div class="mb-3">
                             <div class="alert alert-info">
@@ -187,17 +117,6 @@
                             @enderror
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Trạng thái</label>
-                            <select name="status" class="form-select @error('status') is-invalid @enderror">
-                                <option value="pending" {{ old('status', $salary->status) == 'pending' ? 'selected' : '' }}>Chờ duyệt</option>
-                                <option value="approved" {{ old('status', $salary->status) == 'approved' ? 'selected' : '' }}>Đã duyệt</option>
-                                <option value="paid" {{ old('status', $salary->status) == 'paid' ? 'selected' : '' }}>Đã thanh toán</option>
-                            </select>
-                            @error('status')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
 
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-check-circle me-2"></i> Cập Nhật Bảng Lương
@@ -264,14 +183,6 @@
                 total = workingHours * hourlyRate;
             }
 
-            // Add overtime
-            const overtimeHours = parseFloat($('#overtime_hours').val() || 0);
-            const overtimeRate = parseFloat($('#overtime_rate').val() || 0);
-            total += overtimeHours * overtimeRate;
-
-            // Add bonus and subtract deduction
-            total += parseFloat($('#bonus').val() || 0);
-            total -= parseFloat($('#deduction').val() || 0);
 
             // Update display
             $('#total_salary_display').text(total.toLocaleString('vi-VN'));
@@ -280,7 +191,7 @@
 
         // Event listeners
         $('#employment_type').on('change', toggleEmploymentFields);
-        $('#base_salary, #working_hours, #hourly_rate, #overtime_hours, #overtime_rate, #bonus, #deduction').on('input', calculateTotal);
+        $('#base_salary, #working_hours, #hourly_rate').on('input', calculateTotal);
 
         // Initialize
         toggleEmploymentFields();

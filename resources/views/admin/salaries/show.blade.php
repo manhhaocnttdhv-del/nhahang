@@ -44,9 +44,8 @@
                             </p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Kỳ lương:</strong> 
-                                {{ \Carbon\Carbon::parse($salary->period_start)->format('d/m/Y') }} - 
-                                {{ \Carbon\Carbon::parse($salary->period_end)->format('d/m/Y') }}
+                            <p><strong>Tháng tính lương:</strong> 
+                                {{ \Carbon\Carbon::parse($salary->created_at)->format('m/Y') }}
                             </p>
                             <p><strong>Trạng thái:</strong> 
                                 @if($salary->status === 'pending')

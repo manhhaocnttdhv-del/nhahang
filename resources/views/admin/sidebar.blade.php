@@ -19,6 +19,9 @@
         <li><a href="{{ route('admin.reports.index') }}" class="d-block sidebar-item text-decoration-none text-dark {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
             <i class="bi bi-graph-up"></i> Báo Cáo & Thống Kê
         </a></li>
+        <li><a href="{{ route('admin.profit.index') }}" class="d-block sidebar-item text-decoration-none text-dark {{ request()->routeIs('admin.profit.*') ? 'active' : '' }}">
+            <i class="bi bi-calculator"></i> Tính Lợi Nhuận
+        </a></li>
         <li><a href="{{ route('admin.salaries.index') }}" class="d-block sidebar-item text-decoration-none text-dark {{ request()->routeIs('admin.salaries.*') ? 'active' : '' }}">
             <i class="bi bi-cash-coin"></i> Quản Lý Lương
         </a></li>

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Web\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Web\Admin\ExpenseController as AdminExpenseController;
 use App\Http\Controllers\Web\Admin\IngredientController as AdminIngredientController;
 use App\Http\Controllers\Web\Admin\IngredientStockController as AdminIngredientStockController;
 use App\Http\Controllers\Web\Admin\MenuController as AdminMenuController;
@@ -185,14 +186,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::get('/', [AdminReportController::class, 'index'])->name('index');
     });
     
-    Route::prefix('vouchers')->name('vouchers.')->group(function () {
-        Route::get('/', [AdminVoucherController::class, 'index'])->name('index');
-        Route::get('/create', [AdminVoucherController::class, 'create'])->name('create');
-        Route::post('/', [AdminVoucherController::class, 'store'])->name('store');
-        Route::get('/{id}/edit', [AdminVoucherController::class, 'edit'])->name('edit');
-        Route::put('/{id}', [AdminVoucherController::class, 'update'])->name('update');
-        Route::delete('/{id}', [AdminVoucherController::class, 'destroy'])->name('destroy');
-        Route::put('/{id}/toggle-status', [AdminVoucherController::class, 'toggleStatus'])->name('toggle-status');
+    Route::prefix('profit')->name('profit.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Web\Admin\ProfitController::class, 'index'])->name('index');
     });
     
     Route::prefix('salaries')->name('salaries.')->group(function () {
@@ -203,6 +198,17 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::get('/{id}/edit', [AdminSalaryController::class, 'edit'])->name('edit');
         Route::put('/{id}', [AdminSalaryController::class, 'update'])->name('update');
     });
+    
+    Route::prefix('vouchers')->name('vouchers.')->group(function () {
+        Route::get('/', [AdminVoucherController::class, 'index'])->name('index');
+        Route::get('/create', [AdminVoucherController::class, 'create'])->name('create');
+        Route::post('/', [AdminVoucherController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [AdminVoucherController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [AdminVoucherController::class, 'update'])->name('update');
+        Route::delete('/{id}', [AdminVoucherController::class, 'destroy'])->name('destroy');
+        Route::put('/{id}/toggle-status', [AdminVoucherController::class, 'toggleStatus'])->name('toggle-status');
+    });
+    
     
     Route::prefix('ingredients')->name('ingredients.')->group(function () {
         Route::get('/', [AdminIngredientController::class, 'index'])->name('index');
@@ -218,6 +224,16 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::get('/', [AdminIngredientStockController::class, 'index'])->name('index');
         Route::get('/create', [AdminIngredientStockController::class, 'create'])->name('create');
         Route::post('/', [AdminIngredientStockController::class, 'store'])->name('store');
+    });
+    
+    Route::prefix('expenses')->name('expenses.')->group(function () {
+        Route::get('/', [AdminExpenseController::class, 'index'])->name('index');
+        Route::get('/create', [AdminExpenseController::class, 'create'])->name('create');
+        Route::post('/', [AdminExpenseController::class, 'store'])->name('store');
+        Route::get('/{id}', [AdminExpenseController::class, 'show'])->name('show');
+        Route::get('/{id}/edit', [AdminExpenseController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [AdminExpenseController::class, 'update'])->name('update');
+        Route::delete('/{id}', [AdminExpenseController::class, 'destroy'])->name('destroy');
     });
     
     Route::prefix('attendances')->name('attendances.')->group(function () {

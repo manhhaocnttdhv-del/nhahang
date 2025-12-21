@@ -114,19 +114,12 @@ class SalaryController extends Controller
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'employment_type' => 'required|in:full_time,part_time',
-            'period_start' => 'required|date',
-            'period_end' => 'required|date|after_or_equal:period_start',
             'base_salary' => 'nullable|numeric|min:0',
             'working_days' => 'nullable|integer|min:0|max:31',
             'working_hours' => 'nullable|numeric|min:0',
             'hourly_rate' => 'nullable|numeric|min:0',
-            'overtime_hours' => 'nullable|numeric|min:0',
-            'overtime_rate' => 'nullable|numeric|min:0',
-            'bonus' => 'nullable|numeric|min:0',
-            'deduction' => 'nullable|numeric|min:0',
             'total_salary' => 'required|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
-            'status' => 'required|in:pending,approved,paid',
         ]);
 
         // Validate based on employment type
@@ -141,30 +134,26 @@ class SalaryController extends Controller
             ]);
         }
 
+        // Tự động set status = 'approved' khi admin tạo
         $salary = Salary::create([
             'user_id' => $request->user_id,
             'employment_type' => $request->employment_type,
-            'period_start' => $request->period_start,
-            'period_end' => $request->period_end,
+            'period_start' => now()->startOfMonth()->format('Y-m-d'), // Giữ lại để tương thích database
+            'period_end' => now()->endOfMonth()->format('Y-m-d'), // Giữ lại để tương thích database
             'base_salary' => $request->base_salary ?? 0,
             'working_days' => $request->working_days ?? 0,
             'working_hours' => $request->working_hours ?? 0,
             'hourly_rate' => $request->hourly_rate ?? 0,
-            'overtime_hours' => $request->overtime_hours ?? 0,
-            'overtime_rate' => $request->overtime_rate ?? 0,
-            'bonus' => $request->bonus ?? 0,
-            'deduction' => $request->deduction ?? 0,
+            'overtime_hours' => 0,
+            'overtime_rate' => 0,
+            'bonus' => 0,
+            'deduction' => 0,
             'total_salary' => $request->total_salary,
             'notes' => $request->notes,
-            'status' => $request->status,
+            'status' => 'approved', // Tự động set 'approved' khi admin tạo
+            'approved_by' => auth()->id(),
+            'approved_at' => now(),
         ]);
-
-        if ($request->status === 'approved') {
-            $salary->update([
-                'approved_by' => auth()->id(),
-                'approved_at' => now(),
-            ]);
-        }
 
         return redirect()->route('admin.salaries.index')
             ->with('success', 'Đã tạo bảng lương thành công');
@@ -190,19 +179,12 @@ class SalaryController extends Controller
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'employment_type' => 'required|in:full_time,part_time',
-            'period_start' => 'required|date',
-            'period_end' => 'required|date|after_or_equal:period_start',
             'base_salary' => 'nullable|numeric|min:0',
             'working_days' => 'nullable|integer|min:0|max:31',
             'working_hours' => 'nullable|numeric|min:0',
             'hourly_rate' => 'nullable|numeric|min:0',
-            'overtime_hours' => 'nullable|numeric|min:0',
-            'overtime_rate' => 'nullable|numeric|min:0',
-            'bonus' => 'nullable|numeric|min:0',
-            'deduction' => 'nullable|numeric|min:0',
             'total_salary' => 'required|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
-            'status' => 'required|in:pending,approved,paid',
         ]);
 
         // Validate based on employment type
@@ -217,29 +199,23 @@ class SalaryController extends Controller
             ]);
         }
 
+        // Giữ nguyên period_start và period_end cũ (không cho sửa)
+        // Giữ nguyên status hiện tại khi sửa
         $updateData = [
             'user_id' => $request->user_id,
             'employment_type' => $request->employment_type,
-            'period_start' => $request->period_start,
-            'period_end' => $request->period_end,
             'base_salary' => $request->base_salary ?? 0,
             'working_days' => $request->working_days ?? 0,
             'working_hours' => $request->working_hours ?? 0,
             'hourly_rate' => $request->hourly_rate ?? 0,
-            'overtime_hours' => $request->overtime_hours ?? 0,
-            'overtime_rate' => $request->overtime_rate ?? 0,
-            'bonus' => $request->bonus ?? 0,
-            'deduction' => $request->deduction ?? 0,
+            'overtime_hours' => 0,
+            'overtime_rate' => 0,
+            'bonus' => 0,
+            'deduction' => 0,
             'total_salary' => $request->total_salary,
             'notes' => $request->notes,
-            'status' => $request->status,
+            // Giữ nguyên status hiện tại
         ];
-
-        // Nếu status chuyển sang approved và chưa có approved_by
-        if ($request->status === 'approved' && !$salary->approved_by) {
-            $updateData['approved_by'] = auth()->id();
-            $updateData['approved_at'] = now();
-        }
 
         $salary->update($updateData);
 

@@ -44,16 +44,7 @@
                         <option value="part_time" {{ request('employment_type') == 'part_time' ? 'selected' : '' }}>Part-time</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Trạng thái</label>
-                    <select name="status" class="form-select">
-                        <option value="">Tất cả</option>
-                        <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Chờ duyệt</option>
-                        <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Đã duyệt</option>
-                        <option value="paid" {{ request('status') == 'paid' ? 'selected' : '' }}>Đã thanh toán</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
+                <div class="col-md-6">
                     <label class="form-label">&nbsp;</label>
                     <div>
                         <button type="submit" class="btn btn-primary w-100">
@@ -74,15 +65,8 @@
                             <th>ID</th>
                             <th>Nhân viên</th>
                             <th>Loại</th>
-                            <th>Kỳ lương</th>
-                            <th>Ngày làm</th>
-                            <th>Giờ làm</th>
-                            <th>Lương cơ bản</th>
-                            <th>Làm thêm</th>
-                            <th>Thưởng</th>
-                            <th>Khấu trừ</th>
+                            <th>Tháng</th>
                             <th>Tổng lương</th>
-                            <th>Trạng thái</th>
                             <th>Thao tác</th>
                         </tr>
                     </thead>
@@ -103,43 +87,9 @@
                                     @endif
                                 </td>
                                 <td>
-                                    {{ \Carbon\Carbon::parse($salary->period_start)->format('d/m/Y') }} - 
-                                    {{ \Carbon\Carbon::parse($salary->period_end)->format('d/m/Y') }}
+                                    {{ \Carbon\Carbon::parse($salary->created_at)->format('m/Y') }}
                                 </td>
-                                <td>
-                                    @if($salary->employment_type === 'full_time')
-                                        {{ $salary->working_days ?? 0 }} ngày
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($salary->employment_type === 'part_time')
-                                        {{ number_format($salary->working_hours ?? 0, 1) }} giờ
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                                <td>{{ number_format($salary->base_salary, 0, ',', '.') }} đ</td>
-                                <td>
-                                    @if($salary->overtime_hours > 0)
-                                        {{ $salary->overtime_hours }}h × {{ number_format($salary->overtime_rate, 0, ',', '.') }} đ
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                                <td>{{ number_format($salary->bonus, 0, ',', '.') }} đ</td>
-                                <td>{{ number_format($salary->deduction, 0, ',', '.') }} đ</td>
                                 <td><strong class="text-success">{{ number_format($salary->total_salary, 0, ',', '.') }} đ</strong></td>
-                                <td>
-                                    @if($salary->status === 'pending')
-                                        <span class="badge bg-warning">Chờ duyệt</span>
-                                    @elseif($salary->status === 'approved')
-                                        <span class="badge bg-info">Đã duyệt</span>
-                                    @else
-                                        <span class="badge bg-success">Đã thanh toán</span>
-                                    @endif
-                                </td>
                                 <td>
                                     <a href="{{ route('admin.salaries.show', $salary->id) }}" class="btn btn-sm btn-info">
                                         <i class="bi bi-eye"></i>
@@ -151,12 +101,12 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="13" class="text-center text-muted">Chưa có bảng lương nào</td>
+                                <td colspan="6" class="text-center text-muted">Chưa có bảng lương nào</td>
                             </tr>
                         @endforelse
                         @else
                             <tr>
-                                <td colspan="13" class="text-center text-muted">Chưa có bảng lương nào</td>
+                                <td colspan="6" class="text-center text-muted">Chưa có bảng lương nào</td>
                             </tr>
                         @endif
                     </tbody>

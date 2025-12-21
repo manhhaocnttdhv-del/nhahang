@@ -52,6 +52,141 @@
         </div>
     </div>
 
+    <!-- Profit Analysis (Chỉ hiển thị khi period là month) -->
+    @if($period === 'month' && isset($profitData))
+    <div class="card mb-4 border-success">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i> Phân Tích Lợi Nhuận Tháng Này</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <div class="p-3 bg-light rounded">
+                        <h6 class="text-muted mb-2"><i class="bi bi-cash-coin me-2"></i> Tổng Doanh Thu</h6>
+                        <h4 class="mb-0 text-primary">{{ number_format($profitData['revenue']) }} đ</h4>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="p-3 bg-light rounded">
+                        <h6 class="text-muted mb-2"><i class="bi bi-box-seam me-2"></i> Chi Phí Nguyên Vật Liệu</h6>
+                        <h4 class="mb-0 text-danger">{{ number_format($profitData['ingredient_cost']) }} đ</h4>
+                    </div>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <div class="p-3 bg-light rounded">
+                        <h6 class="text-muted mb-2"><i class="bi bi-person-workspace me-2"></i> Chi Phí Nhân Viên</h6>
+                        <h4 class="mb-0 text-warning">{{ number_format($profitData['salary_cost']) }} đ</h4>
+                    </div>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <div class="p-3 bg-light rounded">
+                        <h6 class="text-muted mb-2">
+                            <i class="bi bi-receipt-cutoff me-2"></i> Chi Phí Khác
+                            <button type="button" class="btn btn-sm btn-link p-0 ms-2" data-bs-toggle="modal" data-bs-target="#editOtherCostsModal" title="Chỉnh sửa">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </h6>
+                        <h4 class="mb-0 text-info">{{ number_format($profitData['other_costs']) }} đ</h4>
+                        <small class="text-muted">(Tự nhập)</small>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="p-3 bg-success text-white rounded">
+                        <h6 class="mb-2"><i class="bi bi-trophy me-2"></i> Lợi Nhuận</h6>
+                        <h4 class="mb-0">{{ number_format($profitData['profit']) }} đ</h4>
+                        <small class="opacity-75">Tỷ suất: {{ number_format($profitData['profit_margin'], 2) }}%</small>
+                    </div>
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-md-12">
+                    <h6 class="mb-3">Chi Tiết Chi Phí:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Khoản Mục</th>
+                                    <th class="text-end">Số Tiền</th>
+                                    <th class="text-end">Tỷ Lệ %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Tổng Doanh Thu</strong></td>
+                                    <td class="text-end"><strong>{{ number_format($profitData['revenue']) }} đ</strong></td>
+                                    <td class="text-end"><strong>100%</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>Chi Phí Nguyên Vật Liệu</td>
+                                    <td class="text-end text-danger">- {{ number_format($profitData['ingredient_cost']) }} đ</td>
+                                    <td class="text-end text-danger">
+                                        {{ $profitData['revenue'] > 0 ? number_format(($profitData['ingredient_cost'] / $profitData['revenue']) * 100, 2) : 0 }}%
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Chi Phí Nhân Viên</td>
+                                    <td class="text-end text-warning">- {{ number_format($profitData['salary_cost']) }} đ</td>
+                                    <td class="text-end text-warning">
+                                        {{ $profitData['revenue'] > 0 ? number_format(($profitData['salary_cost'] / $profitData['revenue']) * 100, 2) : 0 }}%
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Chi Phí Khác</td>
+                                    <td class="text-end text-info">- {{ number_format($profitData['other_costs']) }} đ</td>
+                                    <td class="text-end text-info">
+                                        {{ $profitData['revenue'] > 0 ? number_format(($profitData['other_costs'] / $profitData['revenue']) * 100, 2) : 0 }}%
+                                    </td>
+                                </tr>
+                                <tr class="table-success">
+                                    <td><strong>Lợi Nhuận Ròng</strong></td>
+                                    <td class="text-end"><strong>{{ number_format($profitData['profit']) }} đ</strong></td>
+                                    <td class="text-end"><strong>{{ number_format($profitData['profit_margin'], 2) }}%</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Modal để nhập chi phí khác -->
+    @if($period === 'month')
+    <div class="modal fade" id="editOtherCostsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nhập Chi Phí Khác ({{ now()->format('m/Y') }})</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="GET" action="{{ route('admin.reports.index') }}">
+                    <input type="hidden" name="period" value="month">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Tổng chi phí khác (đ)</label>
+                            <div class="input-group">
+                                <input type="number" name="other_costs" class="form-control" 
+                                       value="{{ request('other_costs', $profitData['other_costs'] ?? 0) }}" 
+                                       step="0.01" min="0" placeholder="Nhập số tiền">
+                                <span class="input-group-text">đ</span>
+                            </div>
+                            <small class="form-text text-muted">
+                                Nhập tổng các chi phí khác như: thuê mặt bằng, điện nước, marketing, v.v.
+                            </small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Lưu</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Daily Revenue Chart -->
     @if(!empty($dailyRevenue) && count($dailyRevenue) > 0)
     <div class="card mb-4">
